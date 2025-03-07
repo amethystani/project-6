@@ -23,32 +23,45 @@
 }
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  
   body {
     @apply bg-background text-foreground antialiased overflow-x-hidden;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
+/* Glass Morphism Effect */
 .glass-morphism {
   @apply backdrop-blur-lg border border-opacity-20 transition-all duration-300;
+  backdrop-filter: blur(10px);
 }
 
-.glass-morphism.light {
+.glass-morphism.light,
+:root .glass-morphism {
   @apply bg-glass-light border-white/20 shadow-lg;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
 }
 
-.glass-morphism.dark {
-  @apply bg-glass-dark border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.3)];
+.glass-morphism.dark,
+.dark .glass-morphism {
+  @apply bg-glass-dark border-white/5;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
 }
 
 .glass-card {
-  @apply glass-morphism rounded-xl p-6 transition-all duration-300;
+  @apply glass-morphism rounded-xl p-4 sm:p-6 transition-all duration-300;
 }
 
-.glass-card.dark {
-  @apply bg-black/40 shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+.glass-card.dark,
+.dark .glass-card {
+  @apply bg-black/40;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
+/* Buttons */
 .button-primary {
   @apply px-4 py-2.5 rounded-lg bg-primary text-primary-foreground 
     transition-all duration-300 hover:opacity-90 hover:shadow-md 
@@ -65,4 +78,56 @@
   @apply w-full px-4 py-2.5 rounded-lg border bg-background/50
     focus:outline-none focus:ring-2 focus:ring-primary/20
     transition-all duration-300;
+}
+
+/* Responsive utilities */
+@screen xs {
+  .container {
+    @apply px-4;
+  }
+}
+
+@screen sm {
+  .container {
+    @apply px-6;
+  }
+}
+
+@screen lg {
+  .container {
+    @apply px-8;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.4s ease-out;
+}
+
+/* Additional hover effects */
+.hover-card-effect {
+  @apply transition-all duration-300;
+}
+
+.hover-card-effect:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dark .hover-card-effect:hover {
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
 }

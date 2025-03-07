@@ -6,32 +6,25 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
 import { ThemeProvider } from './components/ThemeProvider';
-// Department Head pages
-import DepartmentAnalytics from './pages/head/DepartmentAnalytics';
-import ApprovalsManagement from './pages/head/ApprovalsManagement';
-import ReportingStrategy from './pages/head/ReportingStrategy';
-// Admin Staff pages
-import UserManagement from './pages/admin/UserManagement';
-import AuditLogs from './pages/admin/AuditLogs';
-import ResourceAllocation from './pages/admin/ResourceAllocation';
-import SystemSettings from './pages/admin/SystemSettings';
-// Faculty pages
-import CourseManagement from './pages/faculty/CourseManagement';
-import GradeEntry from './pages/faculty/GradeEntry';
-import FacultyAnalytics from './pages/faculty/FacultyAnalytics';
-// Student pages
-import CourseRegistration from './pages/student/CourseRegistration';
-import AssignmentManagement from './pages/student/AssignmentManagement';
-import AcademicRecords from './pages/student/AcademicRecords';
-import Schedule from './pages/student/Schedule';
+
+// Placeholder for routes that don't have components yet
+const PlaceholderPage = () => (
+  <div className="p-6 glass-card">
+    <h1 className="text-2xl font-bold mb-4">Page Under Construction</h1>
+    <p>This feature is coming soon. Please check back later.</p>
+  </div>
+);
 
 function App() {
   const { user, isLoading } = useAuthStore();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-radial from-primary/20 via-background to-background">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 border-b-2 border-primary" />
+          <p className="mt-4 text-foreground/70 animate-pulse">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -39,33 +32,43 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen bg-gradient-radial from-primary/20 via-background to-background">
+        <div className="min-h-screen bg-gradient-radial from-primary/20 via-background to-background overflow-x-hidden">
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
               {/* Department Head routes */}
-              <Route path="department-analytics" element={<DepartmentAnalytics />} />
-              <Route path="approvals-management" element={<ApprovalsManagement />} />
-              <Route path="reporting-strategy" element={<ReportingStrategy />} />
+              <Route path="department-analytics" element={<PlaceholderPage />} />
+              <Route path="approvals-management" element={<PlaceholderPage />} />
+              <Route path="reporting-strategy" element={<PlaceholderPage />} />
               {/* Admin Staff routes */}
-              <Route path="user-management" element={<UserManagement />} />
-              <Route path="audit-logs" element={<AuditLogs />} />
-              <Route path="resource-allocation" element={<ResourceAllocation />} />
-              <Route path="system-settings" element={<SystemSettings />} />
+              <Route path="user-management" element={<PlaceholderPage />} />
+              <Route path="audit-logs" element={<PlaceholderPage />} />
+              <Route path="resource-allocation" element={<PlaceholderPage />} />
+              <Route path="system-settings" element={<PlaceholderPage />} />
               {/* Faculty routes */}
-              <Route path="course-management" element={<CourseManagement />} />
-              <Route path="grade-entry" element={<GradeEntry />} />
-              <Route path="faculty-analytics" element={<FacultyAnalytics />} />
+              <Route path="course-management" element={<PlaceholderPage />} />
+              <Route path="grade-entry" element={<PlaceholderPage />} />
+              <Route path="faculty-analytics" element={<PlaceholderPage />} />
               {/* Student routes */}
-              <Route path="course-registration" element={<CourseRegistration />} />
-              <Route path="assignment-management" element={<AssignmentManagement />} />
-              <Route path="academic-records" element={<AcademicRecords />} />
-              <Route path="schedule" element={<Schedule />} />
+              <Route path="course-registration" element={<PlaceholderPage />} />
+              <Route path="assignment-management" element={<PlaceholderPage />} />
+              <Route path="academic-records" element={<PlaceholderPage />} />
+              <Route path="schedule" element={<PlaceholderPage />} />
             </Route>
           </Routes>
         </div>
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            className: 'glass-morphism',
+            style: {
+              borderRadius: '0.5rem',
+              padding: '0.75rem 1rem',
+            }
+          }}
+        />
       </Router>
     </ThemeProvider>
   );
