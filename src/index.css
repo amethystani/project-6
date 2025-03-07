@@ -381,3 +381,96 @@ body.menu-open {
     animation: none;
   }
 }
+
+/* Pink Theme */
+.pink-theme {
+  --pink-primary: 336 80% 58%;
+  --pink-glow: 336 80% 58% / 0.15;
+}
+
+.pink-theme .bg-primary {
+  background-color: hsl(var(--pink-primary));
+}
+
+.pink-theme .text-primary {
+  color: hsl(var(--pink-primary));
+}
+
+.pink-theme .from-primary {
+  --tw-gradient-from: hsl(var(--pink-primary));
+}
+
+.pink-theme .to-primary {
+  --tw-gradient-to: hsl(var(--pink-primary));
+}
+
+.pink-theme .border-primary {
+  border-color: hsl(var(--pink-primary));
+}
+
+.pink-theme .hover\:text-primary:hover {
+  color: hsl(var(--pink-primary));
+}
+
+.pink-theme .hover\:bg-primary:hover {
+  background-color: hsl(var(--pink-primary));
+}
+
+.pink-theme .bg-primary\/10 {
+  background-color: hsl(var(--pink-primary) / 0.1);
+}
+
+.pink-theme .bg-primary\/20 {
+  background-color: hsl(var(--pink-primary) / 0.2);
+}
+
+.pink-theme .hover\:bg-primary\/10:hover {
+  background-color: hsl(var(--pink-primary) / 0.1);
+}
+
+.pink-theme .hover\:bg-primary\/20:hover {
+  background-color: hsl(var(--pink-primary) / 0.2);
+}
+
+/* Glowing Effects */
+.pink-theme .glow-effect {
+  box-shadow: 0 0 20px hsl(var(--pink-glow));
+}
+
+.pink-theme .glow-text {
+  text-shadow: 0 0 10px hsl(var(--pink-glow));
+}
+
+.pink-theme .glow-border {
+  border-color: hsl(var(--pink-primary));
+  box-shadow: 0 0 15px hsl(var(--pink-glow));
+}
+
+.pink-theme .button-glow {
+  position: relative;
+}
+
+.pink-theme .button-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: hsl(var(--pink-primary));
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pink-theme .button-glow:hover::before {
+  opacity: 0.5;
+}
+
+/* Animation for glowing effect */
+@keyframes pulse-glow {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+.pink-theme .animate-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}

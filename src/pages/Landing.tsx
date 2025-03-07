@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Users, BarChart, Calendar, Shield, MessageSquare, CheckCircle, ArrowRight, GraduationCap, LineChart, UserPlus, Star, Clock, Menu, X, Sun, Moon, Bell, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BookOpen, Users, BarChart, Calendar, Shield, MessageSquare, CheckCircle, ArrowRight, GraduationCap, LineChart, UserPlus, Star, Clock, Menu, X, Sun, Moon, Bell, ArrowUp, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
 
 // Types for custom button
 type ButtonVariant = 'default' | 'outline' | 'secondary' | 'ghost' | 'link';
@@ -65,6 +65,7 @@ const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Bool
 
 export default function Landing() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [isPinkMode, setIsPinkMode] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
@@ -132,8 +133,9 @@ export default function Landing() {
   
   return (
     <div className={cn(
-      "min-h-screen bg-background text-foreground overflow-x-hidden",
-      isLoaded && "animate-fade-in"
+      "min-h-screen bg-background text-foreground overflow-x-hidden transition-all duration-500",
+      isLoaded && "animate-fade-in",
+      isPinkMode && "pink-theme"
     )}>
       {/* Header */}
       <header className={cn(
@@ -143,8 +145,14 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-lg">
-                <div className="absolute inset-0 bg-primary/20 animate-pulse-slow"></div>
+              <div className={cn(
+                "relative w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white font-bold text-lg",
+                isPinkMode ? "bg-gradient-to-br from-pink-500 to-pink-600" : "bg-gradient-to-br from-primary to-primary/60"
+              )}>
+                <div className={cn(
+                  "absolute inset-0 animate-pulse-slow",
+                  isPinkMode ? "bg-pink-500/20" : "bg-primary/20"
+                )}></div>
                 <span className="relative z-10">U</span>
               </div>
               <span className="ml-3 text-xl font-bold tracking-tight">UDIS</span>
@@ -203,6 +211,25 @@ export default function Landing() {
             </nav>
             
             <div className="flex items-center gap-4">
+              {/* Pink mode toggle */}
+              <button
+                onClick={() => setIsPinkMode(!isPinkMode)}
+                className={cn(
+                  "p-2 rounded-full transition-all duration-300 relative group",
+                  isPinkMode ? "bg-pink-500/20 hover:bg-pink-500/30" : "hover:bg-primary/10"
+                )}
+                aria-label="Toggle pink mode"
+              >
+                <div className={cn(
+                  "absolute inset-0 rounded-full blur-lg transition-opacity",
+                  isPinkMode ? "bg-pink-500/30 opacity-100" : "opacity-0"
+                )}></div>
+                <Heart className={cn(
+                  "h-5 w-5 relative z-10 transition-colors",
+                  isPinkMode ? "text-pink-500" : "text-muted-foreground"
+                )} />
+              </button>
+
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-full hover:bg-primary/10 transition-colors"
@@ -285,9 +312,15 @@ export default function Landing() {
                 Next Generation Academic Platform
               </div>
               
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <h1 className={cn(
+                "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight animate-fade-in-up",
+                isPinkMode && "glow-text"
+              )} style={{ animationDelay: '0.3s' }}>
                 University Department <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/70">Information System</span>
+                <span className={cn(
+                  "text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/70",
+                  isPinkMode && "animate-glow"
+                )}>Information System</span>
               </h1>
               
               <p className="mt-4 sm:mt-6 text-base sm:text-lg text-muted-foreground animate-fade-in-up px-4 sm:px-0" style={{ animationDelay: '0.4s' }}>
@@ -297,12 +330,12 @@ export default function Landing() {
               </p>
               
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-                <Button size="lg" asChild>
+                <Button size="lg" asChild className={cn(isPinkMode && "button-glow")}>
                   <Link to="/login" className="flex items-center">
                     Get Started <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" className={cn(isPinkMode && "glow-border")}>
                   Learn More
                 </Button>
               </div>
@@ -310,7 +343,10 @@ export default function Landing() {
             
             <div className="flex-1 w-full max-w-lg lg:max-w-none animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
               <div className="relative">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-primary/40 rounded-2xl blur opacity-30 animate-pulse"></div>
+                <div className={cn(
+                  "absolute -inset-0.5 bg-gradient-to-r from-primary to-primary/40 rounded-2xl blur opacity-30 animate-pulse",
+                  isPinkMode && "animate-glow"
+                )}></div>
                 <div className="relative bg-background/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-xl">
                   <div className="p-1">
                     <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border">
@@ -439,7 +475,10 @@ export default function Landing() {
       <section id="roles" className="py-16 sm:py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 sm:mb-16 max-w-3xl mx-auto">
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium mb-4">
+            <div className={cn(
+              "inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium mb-4",
+              isPinkMode && "glow-effect"
+            )}>
               Tailored for Every Role
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight px-4 sm:px-0">
@@ -819,8 +858,10 @@ export default function Landing() {
                   </div>
                 </li>
               </ul>
-              <Button size="lg">
-                Watch Demo
+              <Button size="lg" asChild className={cn(isPinkMode && "button-glow")}>
+                <Link to="/login" className="flex items-center justify-center">
+                  Watch Demo
+                </Link>
               </Button>
             </div>
           </div>
@@ -840,12 +881,18 @@ export default function Landing() {
                 enhance collaboration, and improve student outcomes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild className="w-full sm:w-auto">
+                <Button size="lg" asChild className={cn(
+                  "w-full sm:w-auto",
+                  isPinkMode && "button-glow"
+                )}>
                   <Link to="/login" className="flex items-center justify-center">
                     Get Started <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <Button variant="outline" size="lg" className={cn(
+                  "w-full sm:w-auto",
+                  isPinkMode && "glow-border"
+                )}>
                   Schedule a Demo
                 </Button>
               </div>
