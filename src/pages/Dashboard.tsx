@@ -875,7 +875,7 @@ export default function Dashboard() {
 
       {isAdminRole && (
         <div className="glass-card">
-          <h3 className="text-xl font-semibold mb-4">System Health</h3>
+          <h3 className="text-lg sm:text-xl font-semibold mb-4">System Health</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-primary/5 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
