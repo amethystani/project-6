@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import { 
@@ -24,6 +24,25 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.classList.add('menu-open');
+    } else {
+      document.body.classList.remove('menu-open');
+    }
+    
+    // Cleanup effect
+    return () => {
+      document.body.classList.remove('menu-open');
+    };
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -58,8 +77,8 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Mobile Navigation Header */}
-      <nav className="glass-morphism sticky top-0 z-50 border-b">
+      {/* Mobile Navigation Header - Fixed position */}
+      <nav className="mobile-nav-fixed glass-morphism border-b">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -103,57 +122,55 @@ export default function Layout() {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
-      <div className={`
-        fixed inset-0 z-40 transform transition-transform duration-300 md:hidden
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="glass-morphism h-full w-64 flex flex-col">
-          <div className="p-4 border-b">
-            <h1 className="text-xl font-bold">UDIS</h1>
-            <div className="mt-2 px-3 py-1 rounded-full text-sm capitalize bg-primary/10 inline-block">
-              {user.role}
+      {/* Mobile Menu - With proper positioning */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu-container md:hidden">
+          <div className="glass-morphism h-full w-64 flex flex-col">
+            <div className="p-4 border-b">
+              <div className="mt-2 px-3 py-1 rounded-full text-sm capitalize bg-primary/10 inline-block">
+                {user.role}
+              </div>
+            </div>
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={cn(
+                      "flex items-center px-3 py-2 rounded-md transition-colors",
+                      isActive 
+                        ? "bg-primary text-primary-foreground" 
+                        : "hover:bg-primary/10"
+                    )}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Icon className="mr-3 h-5 w-5" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="p-4 border-t">
+              <button
+                onClick={logout}
+                className="flex w-full items-center px-3 py-2 rounded-md hover:bg-primary/10 transition-colors"
+              >
+                <LogOut className="mr-3 h-5 w-5" />
+                Logout
+              </button>
             </div>
           </div>
-          <nav className="flex-1 p-4 space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center px-3 py-2 rounded-md transition-colors",
-                    isActive 
-                      ? "bg-primary text-primary-foreground" 
-                      : "hover:bg-primary/10"
-                  )}
-                  onClick={toggleMobileMenu}
-                >
-                  <Icon className="mr-3 h-5 w-5" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="p-4 border-t">
-            <button
-              onClick={logout}
-              className="flex w-full items-center px-3 py-2 rounded-md hover:bg-primary/10 transition-colors"
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Logout
-            </button>
-          </div>
+          {/* Semi-transparent backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 -z-10"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
         </div>
-        {/* Semi-transparent backdrop */}
-        <div 
-          className="absolute inset-0 bg-black/50 -z-10"
-          onClick={toggleMobileMenu}
-          aria-hidden="true"
-        />
-      </div>
+      )}
 
       {/* Desktop Sidebar */}
       <aside className="glass-morphism w-64 border-r fixed inset-y-0 hidden md:flex flex-col">
@@ -195,7 +212,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="flex flex-col flex-1 md:pl-64">
+      <div className="flex flex-col flex-1 md:pl-64 pt-16 md:pt-0">
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
           <Outlet />
         </main>
