@@ -1,30 +1,65 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'dark' | 'light';
-
-interface ThemeContextType {
-  theme: Theme;
+// Define the context type
+type ThemeContextType = {
+  theme: string;
   toggleTheme: () => void;
-}
+};
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Create the context with a default value
+const ThemeContext = createContext<ThemeContextType>({
+  theme: 'system',
+  toggleTheme: () => {},
+});
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Get from localStorage or default to 'light'
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    return savedTheme || 'light';
+// Hook to use the theme context
+export const useTheme = () => useContext(ThemeContext);
+
+export function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Initialize theme from localStorage or default to system preference
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      return savedTheme;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
-
+  // Toggle between light and dark theme
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    setTheme((prevTheme) => {
+      const newTheme = prevTheme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', newTheme);
+      return newTheme;
+    });
   };
+
+  // Apply theme class to document element
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    // Remove previous theme class
+    root.classList.remove('light', 'dark');
+    
+    // Add new theme class
+    root.classList.add(theme);
+    
+    // Add smooth transition for theme changes
+    root.style.setProperty('--transition-theme', 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease');
+    
+    // Set meta theme-color for mobile browsers
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute(
+        'content',
+        theme === 'dark' ? '#0f172a' : '#ffffff'
+      );
+    }
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
@@ -32,11 +67,3 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   );
 }
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-};

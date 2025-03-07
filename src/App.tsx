@@ -1,11 +1,13 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/auth';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
 import { ThemeProvider } from './components/ThemeProvider';
+import Onboarding from './components/Onboarding';
+import Landing from './pages/Landing';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -15,8 +17,33 @@ const PlaceholderPage = () => (
   </div>
 );
 
+// Auth protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuthStore();
+  
+  if (isLoading) return null;
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 function App() {
   const { user, isLoading } = useAuthStore();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    // Check if user is logged in and if onboarding has been completed
+    if (user && !localStorage.getItem('onboarding_completed')) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
 
   if (isLoading) {
     return (
@@ -32,10 +59,24 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen bg-gradient-radial from-primary/20 via-background to-background overflow-x-hidden">
+        <div className="min-h-screen overflow-x-hidden">
+          {showOnboarding && user && (
+            <Onboarding 
+              role={user.role} 
+              onComplete={handleOnboardingComplete} 
+            />
+          )}
           <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Layout />}>
+            
+            {/* Protected routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
               <Route index element={<Dashboard />} />
               {/* Department Head routes */}
               <Route path="department-analytics" element={<PlaceholderPage />} />
@@ -56,13 +97,19 @@ function App() {
               <Route path="academic-records" element={<PlaceholderPage />} />
               <Route path="schedule" element={<PlaceholderPage />} />
             </Route>
+            
+            {/* Redirect for authenticated users */}
+            <Route 
+              path="*" 
+              element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />} 
+            />
           </Routes>
         </div>
         <Toaster 
           position="top-right"
           toastOptions={{
             duration: 3000,
-            className: 'glass-morphism',
+            className: 'bg-background border border-border',
             style: {
               borderRadius: '0.5rem',
               padding: '0.75rem 1rem',

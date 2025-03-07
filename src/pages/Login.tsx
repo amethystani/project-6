@@ -22,7 +22,7 @@ export default function Login() {
   const handleGuestLogin = (role: UserRole) => {
     setUser(guestUsers[role]);
     toast.success(`Logged in as ${role}`);
-    navigate('/');
+    navigate('/dashboard');
   };
 
   return (

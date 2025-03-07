@@ -6,20 +6,47 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
     --header-height: 4rem; /* 64px - for fixed header calculations */
   }
 
   .dark {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 98%;
-    --primary: 0 0% 80%;
-    --primary-foreground: 0 0% 5%;
-    --border: 0 0% 15%;
-    --ring: 0 0% 30%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.5% 48%;
   }
 }
 
@@ -157,4 +184,200 @@ body.menu-open {
 
 .dark .hover-card-effect:hover {
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Modern Animation Utilities */
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 15s ease infinite;
+}
+
+/* Floating animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Subtle hover effects for cards */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion) {
+  .animate-gradient-x,
+  .animate-float,
+  .animate-pulse-slow {
+    animation: none;
+  }
+}
+
+/* Mobile menu fixes */
+.menu-open {
+  overflow: hidden;
+}
+
+/* Radial gradient background */
+.bg-gradient-radial {
+  background-image: radial-gradient(var(--tw-gradient-stops));
+}
+
+/* Dashboard card animation */
+.card-hover-effect {
+  transition: all 0.3s ease;
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Border gradient animation */
+.border-gradient-animate {
+  position: relative;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.border-gradient-animate::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, 
+    hsl(var(--primary)), 
+    hsl(var(--secondary)), 
+    hsl(var(--primary))
+  );
+  z-index: -1;
+  border-radius: 0.625rem;
+  background-size: 400% 400%;
+  animation: gradient-x 5s ease infinite;
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+/* Tooltip styles */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Blob animation for landing page */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -20px) scale(1.05);
+  }
+  50% {
+    transform: translate(0, 10px) scale(0.95);
+  }
+  75% {
+    transform: translate(-20px, -15px) scale(1.05);
+  }
+}
+
+.animate-blob {
+  animation: blob 20s infinite alternate;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion) {
+  .animate-blob {
+    animation: none;
+  }
 }
