@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { BookOpen, Users, BarChart, Calendar, Shield, MessageSquare, CheckCircle, ArrowRight, GraduationCap, LineChart, UserPlus, Star, Clock, Menu, X, Sun, Moon, Bell, ArrowUp, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { BookOpen, Users, BarChart, Calendar, Shield, MessageSquare, CheckCircle, ArrowRight, GraduationCap, LineChart, UserPlus, Star, Clock, Menu, X, Sun, Moon, Bell, ArrowUp, ChevronLeft, ChevronRight, Heart, LogOut } from 'lucide-react'
+import { useAuthStore } from '../store/auth'
 
 // Types for custom button
 type ButtonVariant = 'default' | 'outline' | 'secondary' | 'ghost' | 'link';
@@ -70,6 +71,8 @@ export default function Landing() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
   const [isLoaded, setIsLoaded] = useState(false)
+  const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
   
   useEffect(() => {
     // Set initial theme based on user preference
@@ -208,31 +211,43 @@ export default function Landing() {
                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-full animate-expand-width"></span>
                 )}
               </button>
-            </nav>
-            
-            <div className="flex items-center gap-4">
-              {/* Pink mode toggle */}
-              <button
-                onClick={() => setIsPinkMode(!isPinkMode)}
-                className={cn(
-                  "p-2 rounded-full transition-all duration-300 relative group",
-                  isPinkMode ? "bg-pink-500/20 hover:bg-pink-500/30" : "hover:bg-primary/10"
-                )}
-                aria-label="Toggle pink mode"
-              >
-                <div className={cn(
-                  "absolute inset-0 rounded-full blur-lg transition-opacity",
-                  isPinkMode ? "bg-pink-500/30 opacity-100" : "opacity-0"
-                )}></div>
-                <Heart className={cn(
-                  "h-5 w-5 relative z-10 transition-colors",
-                  isPinkMode ? "text-pink-500" : "text-muted-foreground"
-                )} />
-              </button>
-
-              <button
+              
+              {/* Auth buttons */}
+              {user ? (
+                <div className="flex items-center gap-2 ml-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      logout();
+                      navigate('/');
+                    }}
+                    title="Sign out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate('/login')}
+                >
+                  Sign In
+                </Button>
+              )}
+              
+              {/* Theme toggle button */}
+              <button 
                 onClick={toggleTheme}
-                className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+                className="p-2 rounded-full hover:bg-accent transition-colors"
                 aria-label="Toggle theme"
               >
                 {theme === 'dark' ? (
@@ -242,20 +257,67 @@ export default function Landing() {
                 )}
               </button>
               
-              <Button asChild>
-                <Link to="/login">Sign In</Link>
-              </Button>
+              {/* Easter egg: Pink mode toggle */}
+              <button 
+                onClick={() => setIsPinkMode(!isPinkMode)}
+                className={cn(
+                  "p-2 rounded-full transition-colors",
+                  isPinkMode ? "text-pink-500 hover:bg-pink-500/10" : "hover:bg-accent"
+                )}
+                aria-label="Toggle pink mode"
+              >
+                <Heart className={cn("h-5 w-5", isPinkMode && "fill-pink-500")} />
+              </button>
+            </nav>
+            
+            {/* Mobile menu button */}
+            <div className="flex items-center md:hidden space-x-2">
+              {/* Auth buttons for mobile */}
+              {user ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                    setIsMenuOpen(false);
+                  }}
+                  title="Sign out"
+                  className="mr-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate('/login')}
+                  className="mr-2"
+                >
+                  Sign In
+                </Button>
+              )}
               
-              {/* Mobile menu button */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full hover:bg-accent transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </button>
               <button
                 onClick={toggleMenu}
-                className="md:hidden p-2 rounded-md hover:bg-primary/10"
+                className="p-2 rounded-full hover:bg-accent transition-colors"
                 aria-label="Toggle menu"
               >
                 {isMenuOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-5 w-5" />
                 )}
               </button>
             </div>
@@ -293,9 +355,24 @@ export default function Landing() {
           >
             Get Started
           </button>
-          <Button asChild size="lg" className="mt-4 w-full max-w-xs">
-            <Link to="/login">Sign In</Link>
-          </Button>
+          {user ? (
+            <div className="flex flex-col gap-4 w-full max-w-xs">
+              <Button size="lg" onClick={() => navigate('/dashboard')}>
+                Dashboard
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => {
+                logout();
+                navigate('/');
+                setIsMenuOpen(false);
+              }}>
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <Button asChild size="lg" className="mt-4 w-full max-w-xs">
+              <Link to="/login">Sign In</Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -881,20 +958,46 @@ export default function Landing() {
                 enhance collaboration, and improve student outcomes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild className={cn(
-                  "w-full sm:w-auto",
-                  isPinkMode && "button-glow"
-                )}>
-                  <Link to="/login" className="flex items-center justify-center">
-                    Get Started <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="outline" size="lg" className={cn(
-                  "w-full sm:w-auto",
-                  isPinkMode && "glow-border"
-                )}>
-                  Schedule a Demo
-                </Button>
+                {user ? (
+                  <>
+                    <Button size="lg" asChild className={cn(
+                      "w-full sm:w-auto",
+                      isPinkMode && "button-glow"
+                    )}>
+                      <Link to="/dashboard" className="flex items-center justify-center">
+                        Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="lg" 
+                      className={cn("w-full sm:w-auto", isPinkMode && "glow-border")}
+                      onClick={() => {
+                        logout();
+                        navigate('/');
+                      }}
+                    >
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="lg" asChild className={cn(
+                      "w-full sm:w-auto",
+                      isPinkMode && "button-glow"
+                    )}>
+                      <Link to="/login" className="flex items-center justify-center">
+                        Get Started <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="lg" className={cn(
+                      "w-full sm:w-auto",
+                      isPinkMode && "glow-border"
+                    )}>
+                      Schedule a Demo
+                    </Button>
+                  </>
+                )}
               </div>
               
               <div className="mt-8 sm:mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">

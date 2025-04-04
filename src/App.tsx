@@ -8,6 +8,8 @@ import Layout from './components/Layout';
 import { ThemeProvider } from './components/ThemeProvider';
 import Onboarding from './components/Onboarding';
 import Landing from './pages/Landing';
+import ApprovalsManagement from './pages/head/ApprovalsManagement';
+import ResourceAllocation from './pages/admin/ResourceAllocation';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -29,6 +31,42 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   return <>{children}</>;
 };
+
+// Memoize InitAuth to prevent recreation on every render
+const MemoizedInitAuth = React.memo(() => {
+  const { verifyToken } = useAuthStore();
+  const isVerifyingRef = React.useRef(false);
+  
+  useEffect(() => {
+    // Only verify once on mount
+    const verifyOnMount = async () => {
+      const token = localStorage.getItem('token');
+      if (token && !isVerifyingRef.current) {
+        isVerifyingRef.current = true;
+        console.log('Initial token verification...');
+        await verifyToken();
+        isVerifyingRef.current = false;
+      }
+    };
+    
+    verifyOnMount();
+    
+    // Set up periodic token verification (every 15 minutes)
+    const intervalId = setInterval(async () => {
+      const currentToken = localStorage.getItem('token');
+      if (currentToken && !isVerifyingRef.current) {
+        isVerifyingRef.current = true;
+        console.log('Refreshing authentication...');
+        await verifyToken();
+        isVerifyingRef.current = false;
+      }
+    }, 15 * 60 * 1000); // 15 minutes
+    
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array to run only once
+  
+  return null;
+});
 
 function App() {
   const { user, isLoading } = useAuthStore();
@@ -59,6 +97,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
+        <MemoizedInitAuth />
         <div className="min-h-screen overflow-x-hidden">
           {showOnboarding && user && (
             <Onboarding 
@@ -69,7 +108,7 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={
@@ -80,12 +119,12 @@ function App() {
               <Route index element={<Dashboard />} />
               {/* Department Head routes */}
               <Route path="department-analytics" element={<PlaceholderPage />} />
-              <Route path="approvals-management" element={<PlaceholderPage />} />
+              <Route path="approvals-management" element={<ApprovalsManagement />} />
               <Route path="reporting-strategy" element={<PlaceholderPage />} />
               {/* Admin Staff routes */}
               <Route path="user-management" element={<PlaceholderPage />} />
               <Route path="audit-logs" element={<PlaceholderPage />} />
-              <Route path="resource-allocation" element={<PlaceholderPage />} />
+              <Route path="resource-allocation" element={<ResourceAllocation />} />
               <Route path="system-settings" element={<PlaceholderPage />} />
               {/* Faculty routes */}
               <Route path="course-management" element={<PlaceholderPage />} />
