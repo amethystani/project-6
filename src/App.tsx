@@ -10,6 +10,7 @@ import Onboarding from './components/Onboarding';
 import Landing from './pages/Landing';
 import ApprovalsManagement from './pages/head/ApprovalsManagement';
 import ResourceAllocation from './pages/admin/ResourceAllocation';
+import CourseManagement from './pages/faculty/CourseManagement';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -127,7 +128,7 @@ function App() {
               <Route path="resource-allocation" element={<ResourceAllocation />} />
               <Route path="system-settings" element={<PlaceholderPage />} />
               {/* Faculty routes */}
-              <Route path="course-management" element={<PlaceholderPage />} />
+              <Route path="course-management" element={<CourseManagement />} />
               <Route path="grade-entry" element={<PlaceholderPage />} />
               <Route path="faculty-analytics" element={<PlaceholderPage />} />
               {/* Student routes */}

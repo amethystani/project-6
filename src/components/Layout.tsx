@@ -97,9 +97,9 @@ export default function Layout() {
   // Admin specific navigation
   const getAdminNav = () => [
     { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Course Approvals', href: '/resource-allocation', icon: ClipboardCheck },
     { name: 'User Management', href: '/user-management', icon: Users },
     { name: 'Audit Logs', href: '/audit-logs', icon: Activity },
-    { name: 'Resource Allocation', href: '/resource-allocation', icon: Database },
     { name: 'System Settings', href: '/system-settings', icon: Settings },
   ];
 

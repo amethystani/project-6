@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
+    "antd": "^5.24.6",
+    "axios": "^1.8.4",
     "clsx": "^2.1.0",
     "framer-motion": "^11.0.8",
     "lru-cache": "^7.18.3",
