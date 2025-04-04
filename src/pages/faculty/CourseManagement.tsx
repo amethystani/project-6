@@ -67,7 +67,7 @@ const CourseManagement = () => {
       setFacultyCourses([]);
       
       // Use a hardcoded API URL if the environment variable isn't available
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
       // Fetch course requests made by this faculty
       const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
@@ -114,11 +114,19 @@ const CourseManagement = () => {
       console.log('Submitting form with values:', formattedValues);
 
       // Use a hardcoded API URL if the environment variable isn't available
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const endpoint = `${apiUrl}/api/courses`;
       
-      const response = await axios.post(`${apiUrl}/api/courses`, formattedValues, {
-        headers: { Authorization: `Bearer ${token}` }
+      console.log('Submitting to endpoint:', endpoint);
+      
+      const response = await axios.post(endpoint, formattedValues, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log('Response received:', response.data);
       
       if (response.data.status === 'success') {
         message.success('Course created successfully and is pending approval');
@@ -130,10 +138,19 @@ const CourseManagement = () => {
       }
     } catch (error: any) {
       console.error('Error creating course:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        message.error(error.response.data.message);
+      
+      if (error.response) {
+        console.error('Error response:', error.response);
+        if (error.response.data && error.response.data.message) {
+          message.error(error.response.data.message);
+        } else {
+          message.error(`Request failed with status ${error.response.status}`);
+        }
+      } else if (error.request) {
+        console.error('No response received, request was:', error.request);
+        message.error('No response received from server. Please check if the backend is running.');
       } else {
-        message.error('Failed to create course');
+        message.error('Failed to create course: ' + error.message);
       }
     } finally {
       setSubmitting(false);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
 import { PlusCircle, Book, ClipboardCheck } from 'lucide-react';
@@ -47,7 +48,7 @@ const ApprovalsManagement: React.FC = () => {
     setLoading(true);
     try {
       // Use a hardcoded API URL if the environment variable isn't available
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
       const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -93,11 +94,29 @@ const ApprovalsManagement: React.FC = () => {
       console.log('Submitting form with values:', formattedValues);
 
       // Use a hardcoded API URL if the environment variable isn't available
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const endpoint = `${apiUrl}/api/courses`;
       
-      const response = await axios.post(`${apiUrl}/api/courses`, formattedValues, {
-        headers: { Authorization: `Bearer ${token}` }
+      console.log('Submitting to endpoint:', endpoint);
+      
+      // Check required fields
+      const requiredFields = ['course_code', 'title', 'description', 'credits', 'department'];
+      const missingFields = requiredFields.filter(field => !formattedValues[field]);
+      
+      if (missingFields.length > 0) {
+        message.error(`Missing required fields: ${missingFields.join(', ')}`);
+        setSubmitting(false);
+        return;
+      }
+      
+      const response = await axios.post(endpoint, formattedValues, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log('Response received:', response.data);
       
       if (response.data.status === 'success') {
         message.success('Course created successfully and is pending approval');
@@ -109,10 +128,19 @@ const ApprovalsManagement: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error creating course:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        message.error(error.response.data.message);
+      
+      if (error.response) {
+        console.error('Error response:', error.response);
+        if (error.response.data && error.response.data.message) {
+          message.error(error.response.data.message);
+        } else {
+          message.error(`Request failed with status ${error.response.status}`);
+        }
+      } else if (error.request) {
+        console.error('No response received, request was:', error.request);
+        message.error('No response received from server. Please check if the backend is running.');
       } else {
-        message.error('Failed to create course');
+        message.error('Failed to create course: ' + error.message);
       }
     } finally {
       setSubmitting(false);
@@ -182,14 +210,23 @@ const ApprovalsManagement: React.FC = () => {
     <div className="p-4">
       <div className="flex justify-between mb-6">
         <h1 className="text-2xl font-bold">Course Requests Management</h1>
-        <Button 
-          type="primary" 
-          onClick={showModal}
-          icon={<PlusCircle size={16} className="mr-1" />}
-          size="large"
-        >
-          Request New Course
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={fetchCourseApprovals} 
+            loading={loading}
+          >
+            Refresh
+          </Button>
+          <Button 
+            type="primary" 
+            onClick={showModal}
+            icon={<PlusCircle size={16} className="mr-1" />}
+            size="large"
+          >
+            Request New Course
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
