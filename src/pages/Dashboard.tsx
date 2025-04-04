@@ -26,7 +26,8 @@ import {
   ListChecks,
   Clock,
   Star,
-  CheckCircle
+  CheckCircle,
+  Plus
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ChartsComponent from '../components/ChartsComponent';
@@ -120,6 +121,13 @@ const departmentInsights = [
 // Admin specific quick actions
 const adminActions = [
   {
+    title: 'Course Approvals',
+    description: 'Review and approve course requests',
+    icon: ClipboardCheck,
+    link: '/resource-allocation',
+    color: 'text-green-600'
+  },
+  {
     title: 'User Management',
     description: 'Manage system users',
     icon: Users,
@@ -133,12 +141,6 @@ const adminActions = [
     link: '/audit-logs' 
   },
   { 
-    title: 'Resource Allocation', 
-    description: 'Manage system resources', 
-    icon: Database,
-    link: '/resource-allocation' 
-  },
-  { 
     title: 'System Settings', 
     description: 'Configure system settings', 
     icon: Settings,
@@ -149,6 +151,11 @@ const adminActions = [
 // Admin specific system alerts
 const systemAlerts = [
   { 
+    title: 'New course approval requests pending',
+    severity: 'urgent',
+    time: '1 hour ago'
+  },
+  { 
     title: 'Server load high during peak hours',
     severity: 'warning',
     time: '3 hours ago'
@@ -158,15 +165,63 @@ const systemAlerts = [
     severity: 'info',
     time: '6 hours ago'
   },
-  { 
-    title: 'Failed login attempts for user ID 172',
-    severity: 'critical',
-    time: '1 day ago'
+];
+
+// Admin pending course approvals
+const pendingCourseApprovals = [
+  {
+    id: 1,
+    courseCode: 'CS401',
+    title: 'Advanced Machine Learning',
+    requestedBy: 'Dr. Smith',
+    department: 'Computer Science',
+    requestedAt: '2 days ago'
   },
+  {
+    id: 2,
+    courseCode: 'MATH302',
+    title: 'Differential Equations',
+    requestedBy: 'Dr. Johnson',
+    department: 'Mathematics',
+    requestedAt: '3 days ago'
+  },
+  {
+    id: 3,
+    courseCode: 'PHY101',
+    title: 'Introduction to Physics',
+    requestedBy: 'Dr. Williams',
+    department: 'Physics',
+    requestedAt: '4 days ago'
+  }
+];
+
+// Faculty course requests
+const facultyCourseRequests = [
+  {
+    id: 1,
+    courseCode: 'CS501',
+    title: 'Advanced Algorithms',
+    status: 'pending',
+    requestedAt: '2 days ago'
+  },
+  {
+    id: 2,
+    courseCode: 'CS405',
+    title: 'Mobile App Development',
+    status: 'approved',
+    requestedAt: '1 week ago'
+  }
 ];
 
 // Faculty specific quick actions
 const facultyActions = [
+  {
+    title: 'Request New Course',
+    description: 'Submit a new course for approval',
+    icon: Plus,
+    link: '/course-management',
+    color: 'text-green-600'
+  },
   {
     title: 'Course Management',
     description: 'Manage your courses',
@@ -185,12 +240,6 @@ const facultyActions = [
     description: 'View performance metrics', 
     icon: BarChart,
     link: '/faculty-analytics' 
-  },
-  { 
-    title: 'Office Hours', 
-    description: 'Manage office hours', 
-    icon: Clock,
-    link: '/schedule' 
   },
 ];
 
@@ -401,6 +450,31 @@ const adminInsights = [
   },
 ];
 
+// Department head course requests
+const departmentHeadCourseRequests = [
+  {
+    id: 1,
+    courseCode: 'CS501',
+    title: 'Advanced Algorithms',
+    status: 'pending',
+    requestedAt: '2 days ago'
+  },
+  {
+    id: 2,
+    courseCode: 'CS405',
+    title: 'Mobile App Development',
+    status: 'approved',
+    requestedAt: '1 week ago'
+  },
+  {
+    id: 3,
+    courseCode: 'CS301',
+    title: 'Database Systems',
+    status: 'rejected',
+    requestedAt: '2 weeks ago'
+  }
+];
+
 export default function Dashboard() {
   const { user } = useAuthStore();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -502,6 +576,111 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      {/* Admin-specific Course Approvals Section */}
+      {user?.role === 'admin' && (
+        <div className="bg-background border border-border rounded-lg p-4 md:p-6 overflow-hidden">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold flex items-center">
+              <ClipboardCheck className="h-5 w-5 mr-2 text-primary" />
+              Pending Course Approvals
+            </h2>
+            <Link 
+              to="/resource-allocation" 
+              className="text-sm text-primary hover:underline flex items-center"
+            >
+              View All <ArrowRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-4">Course Code</th>
+                  <th className="text-left py-2 px-4">Title</th>
+                  <th className="text-left py-2 px-4">Department</th>
+                  <th className="text-left py-2 px-4">Requested By</th>
+                  <th className="text-left py-2 px-4">Requested At</th>
+                  <th className="text-left py-2 px-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingCourseApprovals.map((approval) => (
+                  <tr key={approval.id} className="border-b border-border hover:bg-background/50">
+                    <td className="py-2 px-4">{approval.courseCode}</td>
+                    <td className="py-2 px-4">{approval.title}</td>
+                    <td className="py-2 px-4">{approval.department}</td>
+                    <td className="py-2 px-4">{approval.requestedBy}</td>
+                    <td className="py-2 px-4">{approval.requestedAt}</td>
+                    <td className="py-2 px-4">
+                      <div className="flex space-x-2">
+                        <button className="bg-green-500 text-white px-2 py-1 rounded text-xs">
+                          Approve
+                        </button>
+                        <button className="bg-red-500 text-white px-2 py-1 rounded text-xs">
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Faculty-specific Course Requests Section */}
+      {user?.role === 'faculty' && (
+        <div className="bg-background border border-border rounded-lg p-4 md:p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold flex items-center">
+              <ClipboardCheck className="h-5 w-5 mr-2 text-primary" />
+              Your Course Requests
+            </h2>
+            <Link 
+              to="/course-management" 
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-1" /> New Request
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-4">Course Code</th>
+                  <th className="text-left py-2 px-4">Title</th>
+                  <th className="text-left py-2 px-4">Status</th>
+                  <th className="text-left py-2 px-4">Requested At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {facultyCourseRequests.map((request) => (
+                  <tr key={request.id} className="border-b border-border hover:bg-background/50">
+                    <td className="py-2 px-4">{request.courseCode}</td>
+                    <td className="py-2 px-4">{request.title}</td>
+                    <td className="py-2 px-4">
+                      <span 
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          request.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : request.status === 'approved' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-4">{request.requestedAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Analytics Section */}
       {user?.role === 'head' && (
@@ -722,6 +901,108 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Admin-specific System Alerts Section */}
+      {user?.role === 'admin' && (
+        <div className="bg-background border border-border rounded-lg p-4 md:p-6 mb-6">
+          <h2 className="text-xl font-bold flex items-center mb-4">
+            <ShieldAlert className="h-5 w-5 mr-2 text-primary" />
+            System Alerts
+          </h2>
+          <div className="space-y-3">
+            {systemAlerts.map((alert, index) => (
+              <div 
+                key={index} 
+                className={`p-3 rounded-lg border-l-4 ${
+                  alert.severity === 'urgent' 
+                    ? 'border-l-red-500 bg-red-50 dark:bg-red-900/20' 
+                    : alert.severity === 'warning' 
+                    ? 'border-l-amber-500 bg-amber-50 dark:bg-amber-900/20' 
+                    : 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                }`}
+              >
+                <div className="flex justify-between">
+                  <div className="flex items-center">
+                    {alert.severity === 'urgent' && (
+                      <ShieldAlert className="h-5 w-5 text-red-500 mr-2" />
+                    )}
+                    {alert.severity === 'warning' && (
+                      <Bell className="h-5 w-5 text-amber-500 mr-2" />
+                    )}
+                    {alert.severity === 'info' && (
+                      <Bell className="h-5 w-5 text-blue-500 mr-2" />
+                    )}
+                    <span className="font-medium">{alert.title}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{alert.time}</span>
+                </div>
+                {alert.severity === 'urgent' && alert.title.includes('course approval') && (
+                  <div className="mt-2 flex justify-end">
+                    <Link 
+                      to="/resource-allocation" 
+                      className="bg-primary text-primary-foreground px-3 py-1 rounded-md text-xs font-medium"
+                    >
+                      Review Now
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Department Head-specific Course Requests Section */}
+      {user?.role === 'head' && (
+        <div className="bg-background border border-border rounded-lg p-4 md:p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold flex items-center">
+              <ClipboardCheck className="h-5 w-5 mr-2 text-primary" />
+              Department Course Requests
+            </h2>
+            <Link 
+              to="/dashboard/approvals-management" 
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Request New Course
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-4">Course Code</th>
+                  <th className="text-left py-2 px-4">Title</th>
+                  <th className="text-left py-2 px-4">Status</th>
+                  <th className="text-left py-2 px-4">Requested At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {departmentHeadCourseRequests.map((request) => (
+                  <tr key={request.id} className="border-b border-border hover:bg-background/50">
+                    <td className="py-2 px-4">{request.courseCode}</td>
+                    <td className="py-2 px-4">{request.title}</td>
+                    <td className="py-2 px-4">
+                      <span 
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          request.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : request.status === 'approved' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-4">{request.requestedAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

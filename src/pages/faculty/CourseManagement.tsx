@@ -12,14 +12,16 @@ import {
   Upload, 
   Download,
   CheckCircle,
-  XCircle
+  XCircle,
+  ClipboardCheck
 } from 'lucide-react';
-import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message } from 'antd';
+import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs } from 'antd';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { TabPane } = Tabs;
 
 interface Course {
   id: number;
@@ -52,21 +54,31 @@ const CourseManagement = () => {
   const [courseApprovals, setCourseApprovals] = useState<CourseApproval[]>([]);
   const [facultyCourses, setFacultyCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { token } = useAuth();
   const [form] = Form.useForm();
+  const [activeTab, setActiveTab] = useState('pending');
 
   const fetchCourseData = async () => {
     setLoading(true);
     try {
-      // Here we would get all courses assigned to this faculty member
-      // For now, we'll use a mock empty array
+      // For a real implementation, this would fetch courses assigned to this faculty member
+      // Here we're using an empty array as placeholder
       setFacultyCourses([]);
       
-      // Get course requests made by this faculty
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/department-head/course-approvals`, {
+      // Use a hardcoded API URL if the environment variable isn't available
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      // Fetch course requests made by this faculty
+      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCourseApprovals(response.data.data);
+      
+      if (response.data.status === 'success') {
+        setCourseApprovals(response.data.data);
+      } else {
+        message.error('Failed to fetch course data');
+      }
     } catch (error) {
       console.error('Error fetching course data:', error);
       message.error('Failed to fetch course data');
@@ -80,6 +92,7 @@ const CourseManagement = () => {
   }, [token]);
 
   const showModal = () => {
+    console.log('Opening faculty course request modal');
     setIsModalVisible(true);
   };
 
@@ -89,17 +102,41 @@ const CourseManagement = () => {
   };
 
   const handleSubmit = async (values: any) => {
+    setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/courses`, values, {
+      // Make sure credits and capacity are numbers
+      const formattedValues = {
+        ...values,
+        credits: Number(values.credits),
+        capacity: Number(values.capacity || 30)
+      };
+
+      console.log('Submitting form with values:', formattedValues);
+
+      // Use a hardcoded API URL if the environment variable isn't available
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const response = await axios.post(`${apiUrl}/api/courses`, formattedValues, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      message.success('Course created successfully and is pending approval');
-      setIsModalVisible(false);
-      form.resetFields();
-      fetchCourseData();
-    } catch (error) {
+      
+      if (response.data.status === 'success') {
+        message.success('Course created successfully and is pending approval');
+        setIsModalVisible(false);
+        form.resetFields();
+        fetchCourseData();
+      } else {
+        message.error(response.data.message || 'Failed to create course');
+      }
+    } catch (error: any) {
       console.error('Error creating course:', error);
-      message.error('Failed to create course');
+      if (error.response && error.response.data && error.response.data.message) {
+        message.error(error.response.data.message);
+      } else {
+        message.error('Failed to create course');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -115,6 +152,11 @@ const CourseManagement = () => {
         return <Tag>Unknown</Tag>;
     }
   };
+
+  const filteredApprovals = courseApprovals.filter(approval => {
+    if (activeTab === 'all') return true;
+    return approval.status === activeTab;
+  });
 
   const requestColumns = [
     {
@@ -147,6 +189,7 @@ const CourseManagement = () => {
       title: 'Comments',
       dataIndex: 'comments',
       key: 'comments',
+      render: (comments: string) => comments || 'No comments',
     },
     {
       title: 'Requested At',
@@ -157,43 +200,50 @@ const CourseManagement = () => {
   ];
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Course Management</h1>
         <Button 
           type="primary" 
-          onClick={showModal}
-          icon={<Plus size={16} />}
+          onClick={() => showModal()}
+          icon={<Plus size={16} className="mr-1" />}
+          size="large"
         >
           Request New Course
         </Button>
       </div>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
-        {facultyCourses.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No courses assigned yet.</p>
-          </div>
-        ) : (
-          <Table 
-            dataSource={facultyCourses}
-            // Add course table columns here
-            loading={loading}
-            rowKey="id"
-          />
-        )}
+      <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <p className="text-blue-700 flex items-center">
+          <Book className="mr-2 h-5 w-5" />
+          As a faculty member, you can request new courses to be added to the curriculum. All requests will be reviewed before being approved.
+        </p>
       </div>
 
-      <div>
+      <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Your Course Requests</h2>
-        {courseApprovals.length === 0 ? (
+        
+        <Tabs 
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key)}
+          className="mb-4"
+        >
+          <TabPane tab="Pending" key="pending" />
+          <TabPane tab="Approved" key="approved" />
+          <TabPane tab="Rejected" key="rejected" />
+          <TabPane tab="All Requests" key="all" />
+        </Tabs>
+
+        {filteredApprovals.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No course requests made yet.</p>
+            <p className="text-gray-500 mb-2">No course requests with status "{activeTab === 'all' ? 'any' : activeTab}".</p>
+            <Button type="primary" onClick={showModal}>
+              Request a course now
+            </Button>
           </div>
         ) : (
           <Table 
-            dataSource={courseApprovals} 
+            dataSource={filteredApprovals} 
             columns={requestColumns} 
             rowKey="id" 
             loading={loading}
@@ -234,9 +284,10 @@ const CourseManagement = () => {
 
           <Form.Item
             name="description"
-            label="Description"
+            label="Course Description"
+            rules={[{ required: true, message: 'Please provide a course description' }]}
           >
-            <TextArea rows={4} placeholder="Course description..." />
+            <TextArea rows={4} placeholder="Detailed course description including topics covered, learning objectives, etc." />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
@@ -252,6 +303,9 @@ const CourseManagement = () => {
                 <Option value="Chemistry">Chemistry</Option>
                 <Option value="Biology">Biology</Option>
                 <Option value="Engineering">Engineering</Option>
+                <Option value="Business">Business</Option>
+                <Option value="Arts">Arts</Option>
+                <Option value="Humanities">Humanities</Option>
               </Select>
             </Form.Item>
 
@@ -268,24 +322,39 @@ const CourseManagement = () => {
             <Form.Item
               name="prerequisites"
               label="Prerequisites"
+              help="Comma-separated course codes (e.g., CS101, MATH101)"
             >
               <Input placeholder="e.g., CS101, MATH101" />
             </Form.Item>
 
             <Form.Item
               name="capacity"
-              label="Capacity"
+              label="Maximum Capacity"
               initialValue={30}
+              rules={[{ required: true, message: 'Please enter capacity' }]}
             >
-              <InputNumber min={1} max={100} style={{ width: '100%' }} />
+              <InputNumber min={1} max={500} style={{ width: '100%' }} />
             </Form.Item>
           </div>
+
+          <Form.Item
+            name="justification"
+            label="Request Justification"
+            help="Provide a brief explanation for why this course should be added"
+          >
+            <TextArea rows={3} placeholder="Explain why this course would be valuable for students and your department" />
+          </Form.Item>
 
           <div className="flex justify-end">
             <Button htmlType="button" onClick={handleCancel} className="mr-2">
               Cancel
             </Button>
-            <Button type="primary" htmlType="submit">
+            <Button 
+              type="primary" 
+              htmlType="submit"
+              loading={submitting}
+              icon={<ClipboardCheck className="h-4 w-4 mr-1" />}
+            >
               Submit for Approval
             </Button>
           </div>

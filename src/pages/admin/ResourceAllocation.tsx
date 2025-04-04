@@ -31,7 +31,6 @@ interface CourseApproval {
 }
 
 const ResourceAllocation = () => {
-  const [activeTabKey, setActiveTabKey] = useState<string>('1');
   const [courseApprovals, setCourseApprovals] = useState<CourseApproval[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('pending');
   const [loading, setLoading] = useState(false);
@@ -47,7 +46,12 @@ const ResourceAllocation = () => {
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/course-approvals?status=${selectedStatus}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCourseApprovals(response.data.data);
+      
+      if (response.data.status === 'success') {
+        setCourseApprovals(response.data.data);
+      } else {
+        message.error('Failed to fetch course approvals');
+      }
     } catch (error) {
       console.error('Error fetching course approvals:', error);
       message.error('Failed to fetch course approvals');
@@ -79,7 +83,7 @@ const ResourceAllocation = () => {
     if (!currentApproval) return;
 
     try {
-      await axios.put(
+      const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/course-approvals/${currentApproval.id}`,
         {
           status: actionType === 'approve' ? 'approved' : 'rejected',
@@ -90,10 +94,14 @@ const ResourceAllocation = () => {
         }
       );
 
-      message.success(`Course ${actionType === 'approve' ? 'approved' : 'rejected'} successfully`);
-      setCommentModalVisible(false);
-      setComment('');
-      fetchCourseApprovals();
+      if (response.data.status === 'success') {
+        message.success(`Course ${actionType === 'approve' ? 'approved' : 'rejected'} successfully`);
+        setCommentModalVisible(false);
+        setComment('');
+        fetchCourseApprovals();
+      } else {
+        message.error(response.data.message || `Failed to ${actionType} course`);
+      }
     } catch (error) {
       console.error('Error updating course approval:', error);
       message.error(`Failed to ${actionType} course`);
@@ -111,6 +119,13 @@ const ResourceAllocation = () => {
       default:
         return <Tag>Unknown</Tag>;
     }
+  };
+
+  const getRequesterName = (approval: CourseApproval) => {
+    if (!approval.requested_by) return 'Unknown';
+    
+    // In a real implementation, you would fetch user info or have it included in the response
+    return `User ID: ${approval.requested_by}`;
   };
 
   const courseColumns = [
@@ -152,6 +167,11 @@ const ResourceAllocation = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => getStatusTag(status),
+    },
+    {
+      title: 'Requested By',
+      key: 'requested_by',
+      render: (_: any, record: CourseApproval) => getRequesterName(record),
     },
     {
       title: 'Requested At',
@@ -204,12 +224,20 @@ const ResourceAllocation = () => {
           </Select>
         </div>
         
+        <div className="mb-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <p className="text-blue-700 flex items-center">
+            <span className="mr-2">ℹ️</span>
+            Review course requests from department heads and faculty. Approving a course will make it available in the course catalog.
+          </p>
+        </div>
+        
         <Table 
           dataSource={courseApprovals} 
           columns={courseColumns}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
+          onChange={() => {}} // Added to make the table sortable
         />
         
         <Modal

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message } from 'antd';
+import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs } from 'antd';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
+import { PlusCircle, Book, ClipboardCheck } from 'lucide-react';
 
 const { Option } = Select;
 const { TextArea } = Input;
+const { TabPane } = Tabs;
 
 interface Course {
   id: number;
@@ -36,16 +38,26 @@ const ApprovalsManagement: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [courseApprovals, setCourseApprovals] = useState<CourseApproval[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { token } = useAuth();
   const [form] = Form.useForm();
+  const [activeTab, setActiveTab] = useState('pending');
 
   const fetchCourseApprovals = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/department-head/course-approvals`, {
+      // Use a hardcoded API URL if the environment variable isn't available
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCourseApprovals(response.data.data);
+      
+      if (response.data.status === 'success') {
+        setCourseApprovals(response.data.data);
+      } else {
+        message.error('Failed to fetch course approvals');
+      }
     } catch (error) {
       console.error('Error fetching course approvals:', error);
       message.error('Failed to fetch course approvals');
@@ -59,6 +71,7 @@ const ApprovalsManagement: React.FC = () => {
   }, [token]);
 
   const showModal = () => {
+    console.log('Opening course request modal');
     setIsModalVisible(true);
   };
 
@@ -68,17 +81,41 @@ const ApprovalsManagement: React.FC = () => {
   };
 
   const handleSubmit = async (values: any) => {
+    setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/courses`, values, {
+      // Make sure credits and capacity are numbers
+      const formattedValues = {
+        ...values,
+        credits: Number(values.credits),
+        capacity: Number(values.capacity || 30)
+      };
+
+      console.log('Submitting form with values:', formattedValues);
+
+      // Use a hardcoded API URL if the environment variable isn't available
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const response = await axios.post(`${apiUrl}/api/courses`, formattedValues, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      message.success('Course created successfully and is pending approval');
-      setIsModalVisible(false);
-      form.resetFields();
-      fetchCourseApprovals();
-    } catch (error) {
+      
+      if (response.data.status === 'success') {
+        message.success('Course created successfully and is pending approval');
+        setIsModalVisible(false);
+        form.resetFields();
+        fetchCourseApprovals();
+      } else {
+        message.error(response.data.message || 'Failed to create course');
+      }
+    } catch (error: any) {
       console.error('Error creating course:', error);
-      message.error('Failed to create course');
+      if (error.response && error.response.data && error.response.data.message) {
+        message.error(error.response.data.message);
+      } else {
+        message.error('Failed to create course');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -94,6 +131,11 @@ const ApprovalsManagement: React.FC = () => {
         return <Tag>Unknown</Tag>;
     }
   };
+
+  const filteredApprovals = courseApprovals.filter(approval => {
+    if (activeTab === 'all') return true;
+    return approval.status === activeTab;
+  });
 
   const columns = [
     {
@@ -126,6 +168,7 @@ const ApprovalsManagement: React.FC = () => {
       title: 'Comments',
       dataIndex: 'comments',
       key: 'comments',
+      render: (comments: string) => comments || 'No comments',
     },
     {
       title: 'Requested At',
@@ -136,16 +179,39 @@ const ApprovalsManagement: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-bold">Course Approvals Management</h1>
-        <Button type="primary" onClick={showModal}>
-          Add New Course
+    <div className="p-4">
+      <div className="flex justify-between mb-6">
+        <h1 className="text-2xl font-bold">Course Requests Management</h1>
+        <Button 
+          type="primary" 
+          onClick={showModal}
+          icon={<PlusCircle size={16} className="mr-1" />}
+          size="large"
+        >
+          Request New Course
         </Button>
       </div>
 
+      <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <p className="text-blue-700 flex items-center">
+          <Book className="mr-2 h-5 w-5" />
+          Request new courses for your department. All requests will be reviewed by an administrator before being added to the course catalog.
+        </p>
+      </div>
+
+      <Tabs 
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key)}
+        className="mb-4"
+      >
+        <TabPane tab="Pending" key="pending" />
+        <TabPane tab="Approved" key="approved" />
+        <TabPane tab="Rejected" key="rejected" />
+        <TabPane tab="All Requests" key="all" />
+      </Tabs>
+
       <Table 
-        dataSource={courseApprovals} 
+        dataSource={filteredApprovals} 
         columns={columns} 
         rowKey="id" 
         loading={loading}
@@ -153,7 +219,7 @@ const ApprovalsManagement: React.FC = () => {
       />
 
       <Modal
-        title="Add New Course"
+        title="Request New Course"
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
@@ -184,9 +250,10 @@ const ApprovalsManagement: React.FC = () => {
 
           <Form.Item
             name="description"
-            label="Description"
+            label="Course Description"
+            rules={[{ required: true, message: 'Please provide a course description' }]}
           >
-            <TextArea rows={4} placeholder="Course description..." />
+            <TextArea rows={4} placeholder="Detailed course description including topics covered, learning objectives, etc." />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
@@ -202,6 +269,9 @@ const ApprovalsManagement: React.FC = () => {
                 <Option value="Chemistry">Chemistry</Option>
                 <Option value="Biology">Biology</Option>
                 <Option value="Engineering">Engineering</Option>
+                <Option value="Business">Business</Option>
+                <Option value="Arts">Arts</Option>
+                <Option value="Humanities">Humanities</Option>
               </Select>
             </Form.Item>
 
@@ -218,24 +288,39 @@ const ApprovalsManagement: React.FC = () => {
             <Form.Item
               name="prerequisites"
               label="Prerequisites"
+              help="Comma-separated course codes (e.g., CS101, MATH101)"
             >
               <Input placeholder="e.g., CS101, MATH101" />
             </Form.Item>
 
             <Form.Item
               name="capacity"
-              label="Capacity"
+              label="Maximum Capacity"
               initialValue={30}
+              rules={[{ required: true, message: 'Please enter capacity' }]}
             >
-              <InputNumber min={1} max={100} style={{ width: '100%' }} />
+              <InputNumber min={1} max={500} style={{ width: '100%' }} />
             </Form.Item>
           </div>
+
+          <Form.Item
+            name="justification"
+            label="Request Justification"
+            help="Provide a brief explanation for why this course should be added"
+          >
+            <TextArea rows={3} placeholder="Explain why this course would be valuable for students and the department" />
+          </Form.Item>
 
           <div className="flex justify-end">
             <Button htmlType="button" onClick={handleCancel} className="mr-2">
               Cancel
             </Button>
-            <Button type="primary" htmlType="submit">
+            <Button 
+              type="primary" 
+              htmlType="submit"
+              loading={submitting}
+              icon={<ClipboardCheck className="h-4 w-4 mr-1" />}
+            >
               Submit for Approval
             </Button>
           </div>
