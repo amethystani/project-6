@@ -9,9 +9,17 @@ import {
   FileText,
   AlertCircle,
   Clock,
-  Hourglass
+  Hourglass,
+  Search,
+  Filter,
+  ArrowUpCircle,
+  Eye
 } from 'lucide-react';
+import { Card, Table, Tag, Badge, Input, Button, Progress, Tabs, Tooltip, Divider, Space, Modal, Select } from 'antd';
 import { toast } from 'react-hot-toast';
+
+const { TabPane } = Tabs;
+const { Search: SearchInput } = Input;
 
 // Mock data for assignments
 const ASSIGNMENTS = [
@@ -24,6 +32,8 @@ const ASSIGNMENTS = [
     dueDate: '2023-05-15T23:59:59',
     status: 'pending',
     maxPoints: 100,
+    fileType: 'pdf,doc,docx',
+    allowsMultipleFiles: false
   },
   {
     id: 'assign2',
@@ -34,6 +44,8 @@ const ASSIGNMENTS = [
     dueDate: '2023-05-10T23:59:59',
     status: 'pending',
     maxPoints: 50,
+    fileType: 'pdf',
+    allowsMultipleFiles: true
   },
   {
     id: 'assign3',
@@ -44,6 +56,8 @@ const ASSIGNMENTS = [
     dueDate: '2023-05-22T23:59:59',
     status: 'pending',
     maxPoints: 80,
+    fileType: 'pdf,docx',
+    allowsMultipleFiles: false
   },
   {
     id: 'assign4',
@@ -54,6 +68,8 @@ const ASSIGNMENTS = [
     dueDate: '2023-05-18T23:59:59',
     status: 'pending',
     maxPoints: 60,
+    fileType: 'pdf,doc,docx',
+    allowsMultipleFiles: false
   }
 ];
 
@@ -133,6 +149,10 @@ const AssignmentManagement = () => {
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
   const [expandedAssignment, setExpandedAssignment] = useState<string | null>(null);
   const [expandedGrade, setExpandedGrade] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [courseFilter, setCourseFilter] = useState<string>('');
+  const [assignmentDetailsVisible, setAssignmentDetailsVisible] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   
   // Function to calculate GPA
   const calculateGPA = () => {
@@ -227,329 +247,532 @@ const AssignmentManagement = () => {
     return 'bg-green-100 text-green-800';
   };
 
+  // Show assignment details
+  const showAssignmentDetails = (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setAssignmentDetailsVisible(true);
+  };
+
+  // Get unique courses for filter
+  const courses = Array.from(new Set([
+    ...assignments.map(a => a.courseName), 
+    ...grades.map(g => g.courseName)
+  ])).sort();
+
+  // Filter assignments
+  const filteredAssignments = assignments.filter(assignment => {
+    const matchesSearch = 
+      assignment.title.toLowerCase().includes(searchText.toLowerCase()) ||
+      assignment.description.toLowerCase().includes(searchText.toLowerCase()) ||
+      assignment.courseId.toLowerCase().includes(searchText.toLowerCase()) ||
+      assignment.courseName.toLowerCase().includes(searchText.toLowerCase());
+    
+    const matchesCourse = courseFilter ? assignment.courseName === courseFilter : true;
+    
+    return matchesSearch && matchesCourse;
+  });
+
+  // Filter grades
+  const filteredGrades = grades.filter(grade => {
+    const matchesSearch = 
+      grade.title.toLowerCase().includes(searchText.toLowerCase()) ||
+      grade.courseId.toLowerCase().includes(searchText.toLowerCase()) ||
+      grade.courseName.toLowerCase().includes(searchText.toLowerCase());
+    
+    const matchesCourse = courseFilter ? grade.courseName === courseFilter : true;
+    
+    return matchesSearch && matchesCourse;
+  });
+
+  // Format score as percentage
+  const formatScore = (score: number, maxPoints: number) => {
+    const percentage = (score / maxPoints) * 100;
+    return `${score}/${maxPoints} (${percentage.toFixed(1)}%)`;
+  };
+
+  // Get grade letter based on score
+  const getGradeLetter = (score: number, maxPoints: number) => {
+    const percentage = (score / maxPoints) * 100;
+    
+    if (percentage >= 90) return 'A';
+    if (percentage >= 80) return 'B';
+    if (percentage >= 70) return 'C';
+    if (percentage >= 60) return 'D';
+    return 'F';
+  };
+
+  // Get color based on score
+  const getScoreColor = (score: number, maxPoints: number) => {
+    const percentage = (score / maxPoints) * 100;
+    
+    if (percentage >= 90) return 'green';
+    if (percentage >= 80) return 'blue';
+    if (percentage >= 70) return 'geekblue';
+    if (percentage >= 60) return 'orange';
+    return 'red';
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Assignment Management</h1>
         
-        <div className="relative mt-4 md:mt-0">
-          <button 
-            className="flex items-center p-2 text-gray-600 hover:text-primary"
+        <div className="flex items-center mt-4 md:mt-0 gap-2">
+          <Button 
+            type={activeTab === 'notifications' ? 'primary' : 'default'}
+            className="relative"
             onClick={() => setActiveTab('notifications')}
-          >
-            <Bell size={20} />
-            {notifications.some(n => !n.isRead) && (
-              <span className="absolute top-0 right-0 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-      
-      {/* Tabs */}
-      <div className="border-b mb-6">
-        <nav className="flex space-x-4">
-          <button
-            onClick={() => setActiveTab('assignments')}
-            className={`py-2 px-3 border-b-2 font-medium text-sm ${
-              activeTab === 'assignments' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Assignments
-          </button>
-          <button
-            onClick={() => setActiveTab('grades')}
-            className={`py-2 px-3 border-b-2 font-medium text-sm ${
-              activeTab === 'grades' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Grades
-          </button>
-          <button
-            onClick={() => setActiveTab('notifications')}
-            className={`py-2 px-3 border-b-2 font-medium text-sm ${
-              activeTab === 'notifications' 
-                ? 'border-primary text-primary' 
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            icon={<Bell size={16} />}
           >
             Notifications
             {notifications.some(n => !n.isRead) && (
-              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-primary text-white">
-                {notifications.filter(n => !n.isRead).length}
-              </span>
+              <Badge 
+                dot 
+                status="error" 
+                style={{ position: 'absolute', top: 5, right: 5 }}
+              />
             )}
-          </button>
-        </nav>
+          </Button>
+          
+          <div className="bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-lg flex items-center">
+            <GradeIcon className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              Current GPA: {calculateGPA()}
+            </span>
+          </div>
+        </div>
       </div>
       
-      {/* Assignments Tab */}
+      {/* Tabs for different views */}
+      <Tabs 
+        activeKey={activeTab} 
+        onChange={setActiveTab}
+        type="card"
+        className="mb-6"
+      >
+        <TabPane 
+          tab={
+            <span className="flex items-center">
+              <FileText size={16} className="mr-2" />
+              Assignments
+            </span>
+          } 
+          key="assignments"
+        />
+        
+        <TabPane 
+          tab={
+            <span className="flex items-center">
+              <CheckCircle size={16} className="mr-2" />
+              Grades
+            </span>
+          } 
+          key="grades"
+        />
+        
+        <TabPane 
+          tab={
+            <span className="flex items-center">
+              <Bell size={16} className="mr-2" />
+              Notifications
+              {notifications.some(n => !n.isRead) && (
+                <Badge count={notifications.filter(n => !n.isRead).length} size="small" style={{ marginLeft: 5 }} />
+              )}
+            </span>
+          } 
+          key="notifications"
+        />
+      </Tabs>
+      
+      {/* Assignment Tab Content */}
       {activeTab === 'assignments' && (
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <FileText className="mr-2" /> 
-            Upcoming Assignments
-          </h2>
-          
-          {assignments.length === 0 ? (
-            <div className="text-center p-8 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No pending assignments</p>
+        <div>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Upcoming Assignments</h2>
+            <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
+              <SearchInput
+                placeholder="Search assignments"
+                style={{ width: 200 }}
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                prefix={<Search size={16} className="text-gray-400" />}
+              />
+              <Select
+                placeholder="Filter by Course"
+                style={{ width: 200 }}
+                value={courseFilter || undefined}
+                onChange={setCourseFilter}
+                allowClear
+                onClear={() => setCourseFilter('')}
+              >
+                {courses.map(course => (
+                  <Select.Option key={course} value={course}>{course}</Select.Option>
+                ))}
+              </Select>
+              <Button 
+                type="default" 
+                icon={<Filter size={16} />}
+                onClick={() => {
+                  setSearchText('');
+                  setCourseFilter('');
+                }}
+              >
+                Clear
+              </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {assignments.map(assignment => (
-                <div key={assignment.id} className="border rounded-lg shadow-sm bg-white overflow-hidden">
-                  <div 
-                    className="p-4 cursor-pointer"
-                    onClick={() => setExpandedAssignment(
-                      expandedAssignment === assignment.id ? null : assignment.id
-                    )}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-lg">{assignment.title}</h3>
-                        <p className="text-sm text-gray-600">{assignment.courseId}: {assignment.courseName}</p>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {filteredAssignments.length === 0 ? (
+              <Card>
+                <div className="text-center py-8">
+                  <FileText size={40} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500">No assignments match your search criteria</p>
+                </div>
+              </Card>
+            ) : (
+              filteredAssignments.map(assignment => (
+                <Card 
+                  key={assignment.id} 
+                  className={`assignment-card ${assignment.status === 'submitted' ? 'border-green-300' : ''}`}
+                >
+                  <div className="flex flex-col md:flex-row justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <Tag color="blue">{assignment.courseId}</Tag>
+                        <h3 className="text-lg font-semibold ml-2">{assignment.title}</h3>
                       </div>
-                      <div className="flex items-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${getStatusBadgeClass(assignment.dueDate)}`}>
-                          {getDaysRemaining(assignment.dueDate)}
-                        </span>
-                        {assignment.status === 'submitted' ? (
-                          <CheckCircle size={20} className="text-green-500" />
-                        ) : (
-                          <Clock size={20} className="text-gray-400" />
-                        )}
+                      
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        {assignment.courseName}
+                      </p>
+                      
+                      <p className="mb-4">{assignment.description}</p>
+                      
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex items-center">
+                          <Clock size={16} className="mr-1 text-gray-500" />
+                          <span className="text-sm">Due: {formatDate(assignment.dueDate)}</span>
+                        </div>
+                        
+                        <div className="flex items-center">
+                          <span className={`text-sm px-2 py-1 rounded-full ${getStatusBadgeClass(assignment.dueDate)}`}>
+                            {getDaysRemaining(assignment.dueDate)}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center">
+                          <AlertCircle size={16} className="mr-1 text-gray-500" />
+                          <span className="text-sm">{assignment.maxPoints} points</span>
+                        </div>
                       </div>
                     </div>
                     
-                    {expandedAssignment === assignment.id && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="mb-3">{assignment.description}</p>
-                        <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
-                          <div className="flex items-center">
-                            <Calendar size={16} className="mr-1" />
-                            <span>Due: {formatDate(assignment.dueDate)}</span>
-                          </div>
-                          <div>
-                            <span>Max Points: {assignment.maxPoints}</span>
-                          </div>
+                    <div className="flex flex-col justify-center items-end mt-4 md:mt-0 space-y-2">
+                      {assignment.status === 'submitted' ? (
+                        <Tag color="green" icon={<CheckCircle size={14} />}>
+                          Submitted
+                        </Tag>
+                      ) : uploadProgress[assignment.id] ? (
+                        <div className="w-48">
+                          <Progress percent={uploadProgress[assignment.id]} status="active" />
                         </div>
-                        
-                        {assignment.status !== 'submitted' ? (
-                          <div>
-                            {uploadProgress[assignment.id] !== undefined ? (
-                              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-                                <div 
-                                  className="bg-primary h-2.5 rounded-full transition-all duration-300" 
-                                  style={{ width: `${uploadProgress[assignment.id]}%` }}
-                                ></div>
-                                <p className="text-xs text-gray-500 mt-1 text-right">
-                                  Uploading: {uploadProgress[assignment.id]}%
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="flex items-center mt-2">
-                                <label className="flex-1 mr-4">
-                                  <div className="relative flex items-center p-2 rounded-md border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer">
-                                    <Upload size={18} className="mr-2 text-gray-500" />
-                                    <span className="text-gray-500">Choose file to upload</span>
-                                    <input 
-                                      type="file" 
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                      onChange={() => handleSubmitAssignment(assignment.id)}
-                                    />
-                                  </div>
-                                </label>
-                                <button 
-                                  onClick={() => handleSubmitAssignment(assignment.id)}
-                                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-                                >
-                                  Submit
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="bg-green-50 border border-green-200 rounded-md p-3 flex items-center">
-                            <CheckCircle size={18} className="text-green-500 mr-2" />
-                            <p className="text-green-800">
-                              Submitted successfully on {formatDate(new Date().toISOString())}
-                            </p>
-                          </div>
-                        )}
+                      ) : (
+                        <Space>
+                          <Button
+                            type="primary"
+                            icon={<ArrowUpCircle size={16} />}
+                            onClick={() => handleSubmitAssignment(assignment.id)}
+                          >
+                            Submit
+                          </Button>
+                          <Button
+                            type="default"
+                            icon={<Eye size={16} />}
+                            onClick={() => showAssignmentDetails(assignment)}
+                          >
+                            Details
+                          </Button>
+                        </Space>
+                      )}
+                      
+                      <div className="text-xs text-gray-500">
+                        File types: {assignment.fileType}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Grades Tab */}
-      {activeTab === 'grades' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border">
-            <h2 className="text-xl font-semibold mb-4">Grade Summary</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-primary/10 rounded-lg p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Current GPA</h3>
-                <p className="text-3xl font-bold text-primary">{calculateGPA()}</p>
-              </div>
-              <div className="bg-green-100 rounded-lg p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Assignments Completed</h3>
-                <p className="text-3xl font-bold text-green-600">{grades.length}</p>
-              </div>
-              <div className="bg-blue-100 rounded-lg p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Average Score</h3>
-                <p className="text-3xl font-bold text-blue-600">
-                  {grades.length > 0 
-                    ? `${Math.round(grades.reduce((sum, grade) => sum + (grade.score / grade.maxPoints * 100), 0) / grades.length)}%` 
-                    : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Grade Details</h2>
-            {grades.length === 0 ? (
-              <div className="text-center p-8 bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No grades available</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-600">Assignment</th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-600">Course</th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-600">Score</th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-600">Submitted</th>
-                      <th className="py-3 px-4 text-left text-sm font-medium text-gray-600">Graded</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {grades.map(grade => (
-                      <React.Fragment key={grade.assignmentId}>
-                        <tr 
-                          className="hover:bg-gray-50 cursor-pointer"
-                          onClick={() => setExpandedGrade(
-                            expandedGrade === grade.assignmentId ? null : grade.assignmentId
-                          )}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="font-medium">{grade.title}</div>
-                          </td>
-                          <td className="py-3 px-4 text-gray-700">
-                            {grade.courseId}: {grade.courseName}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <div className="mr-2 font-medium">
-                                {grade.score}/{grade.maxPoints}
-                              </div>
-                              <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                                <div 
-                                  className={`h-1.5 rounded-full ${
-                                    (grade.score / grade.maxPoints) > 0.8 
-                                      ? 'bg-green-500' 
-                                      : (grade.score / grade.maxPoints) > 0.7 
-                                        ? 'bg-yellow-500' 
-                                        : 'bg-red-500'
-                                  }`}
-                                  style={{ width: `${(grade.score / grade.maxPoints) * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {formatDate(grade.submittedDate)}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {formatDate(grade.gradedDate)}
-                          </td>
-                        </tr>
-                        {expandedGrade === grade.assignmentId && (
-                          <tr>
-                            <td colSpan={5} className="py-3 px-4 bg-gray-50">
-                              <div className="border-t pt-3">
-                                <h4 className="font-medium mb-2">Instructor Feedback:</h4>
-                                <p className="text-gray-700">{grade.feedback}</p>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                </Card>
+              ))
             )}
           </div>
         </div>
       )}
       
-      {/* Notifications Tab */}
-      {activeTab === 'notifications' && (
+      {/* Grades Tab Content */}
+      {activeTab === 'grades' && (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Notifications</h2>
-          {notifications.length === 0 ? (
-            <div className="text-center p-8 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No notifications</p>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Your Grades</h2>
+            <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
+              <SearchInput
+                placeholder="Search grades"
+                style={{ width: 200 }}
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                prefix={<Search size={16} className="text-gray-400" />}
+              />
+              <Select
+                placeholder="Filter by Course"
+                style={{ width: 200 }}
+                value={courseFilter || undefined}
+                onChange={setCourseFilter}
+                allowClear
+                onClear={() => setCourseFilter('')}
+              >
+                {courses.map(course => (
+                  <Select.Option key={course} value={course}>{course}</Select.Option>
+                ))}
+              </Select>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map(notification => (
-                <div 
-                  key={notification.id} 
-                  className={`p-4 border rounded-lg flex ${notification.isRead ? 'bg-white' : 'bg-blue-50'}`}
-                  onClick={() => markNotificationAsRead(notification.id)}
-                >
-                  <div className="mr-4">
-                    {notification.type === 'assignment' && (
-                      <div className="bg-blue-100 p-2 rounded-full">
-                        <Calendar size={20} className="text-blue-600" />
-                      </div>
-                    )}
-                    {notification.type === 'grade' && (
-                      <div className="bg-green-100 p-2 rounded-full">
-                        <FileText size={20} className="text-green-600" />
-                      </div>
-                    )}
-                    {notification.type === 'announcement' && (
-                      <div className="bg-amber-100 p-2 rounded-full">
-                        <Bell size={20} className="text-amber-600" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium">{notification.title}</h3>
-                      <span className="text-xs text-gray-500">{formatDate(notification.date)}</span>
-                    </div>
-                    <p className="text-gray-600 mt-1">{notification.message}</p>
-                  </div>
-                  {!notification.isRead && (
-                    <div className="ml-2 flex-shrink-0">
-                      <div className="h-2 w-2 rounded-full bg-primary"></div>
-                    </div>
-                  )}
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {filteredGrades.length === 0 ? (
+              <Card>
+                <div className="text-center py-8">
+                  <FileText size={40} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500">No grades match your search criteria</p>
                 </div>
-              ))}
-            </div>
-          )}
+              </Card>
+            ) : (
+              filteredGrades.map(grade => (
+                <Card key={grade.assignmentId} className="grade-card">
+                  <div className="flex flex-col md:flex-row justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <Tag color="blue">{grade.courseId}</Tag>
+                        <h3 className="text-lg font-semibold ml-2">{grade.title}</h3>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        {grade.courseName}
+                      </p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <div className="text-sm text-gray-500">Submitted</div>
+                          <div>{formatDate(grade.submittedDate)}</div>
+                        </div>
+                        
+                        <div>
+                          <div className="text-sm text-gray-500">Graded</div>
+                          <div>{formatDate(grade.gradedDate)}</div>
+                        </div>
+                        
+                        <div>
+                          <div className="text-sm text-gray-500">Score</div>
+                          <div>{formatScore(grade.score, grade.maxPoints)}</div>
+                        </div>
+                      </div>
+                      
+                      {expandedGrade === grade.assignmentId && (
+                        <div className="mt-4 pt-4 border-t">
+                          <h4 className="font-semibold mb-2">Feedback:</h4>
+                          <p className="text-gray-700 dark:text-gray-300">{grade.feedback}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col justify-center items-end mt-4 md:mt-0">
+                      <div className="flex items-center mb-2">
+                        <Tag color={getScoreColor(grade.score, grade.maxPoints)} className="text-lg px-3 py-1">
+                          {getGradeLetter(grade.score, grade.maxPoints)}
+                        </Tag>
+                      </div>
+                      
+                      <Button
+                        type="link"
+                        onClick={() => setExpandedGrade(expandedGrade === grade.assignmentId ? null : grade.assignmentId)}
+                      >
+                        {expandedGrade === grade.assignmentId ? 'Hide Feedback' : 'View Feedback'}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
       )}
+      
+      {/* Notifications Tab Content */}
+      {activeTab === 'notifications' && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Notifications</h2>
+            
+            <Button
+              type="default"
+              onClick={() => setNotifications(notifications.map(n => ({ ...n, isRead: true })))}
+              disabled={!notifications.some(n => !n.isRead)}
+            >
+              Mark All as Read
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {notifications.length === 0 ? (
+              <Card>
+                <div className="text-center py-8">
+                  <Bell size={40} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500">No notifications at this time</p>
+                </div>
+              </Card>
+            ) : (
+              notifications.map(notification => (
+                <Card 
+                  key={notification.id} 
+                  className={`notification-card ${!notification.isRead ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  onClick={() => markNotificationAsRead(notification.id)}
+                >
+                  <div className="flex">
+                    <div className="mr-4">
+                      {notification.type === 'assignment' && (
+                        <FileText size={24} className="text-blue-500" />
+                      )}
+                      {notification.type === 'grade' && (
+                        <CheckCircle size={24} className="text-green-500" />
+                      )}
+                      {notification.type === 'announcement' && (
+                        <Bell size={24} className="text-orange-500" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-semibold">{notification.title}</h4>
+                        <span className="text-xs text-gray-500">{formatDate(notification.date)}</span>
+                      </div>
+                      
+                      <p className="text-gray-700 dark:text-gray-300">{notification.message}</p>
+                      
+                      {!notification.isRead && (
+                        <Badge status="processing" text="New" className="mt-2" />
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Assignment Details Modal */}
+      <Modal
+        title="Assignment Details"
+        open={assignmentDetailsVisible}
+        onCancel={() => setAssignmentDetailsVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setAssignmentDetailsVisible(false)}>
+            Close
+          </Button>,
+          selectedAssignment && selectedAssignment.status !== 'submitted' && (
+            <Button 
+              key="submit" 
+              type="primary"
+              onClick={() => {
+                setAssignmentDetailsVisible(false);
+                handleSubmitAssignment(selectedAssignment.id);
+              }}
+            >
+              Submit Assignment
+            </Button>
+          )
+        ]}
+        width={700}
+      >
+        {selectedAssignment && (
+          <div className="py-4">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-2xl font-bold mb-1">{selectedAssignment.title}</h3>
+                <div className="flex items-center">
+                  <Tag color="blue">{selectedAssignment.courseId}</Tag>
+                  <span className="ml-2 text-gray-600">{selectedAssignment.courseName}</span>
+                </div>
+              </div>
+              <div>
+                <Tag 
+                  color={
+                    selectedAssignment.status === 'submitted' ? 'green' : 
+                    getDaysRemaining(selectedAssignment.dueDate) === 'Overdue' ? 'red' : 
+                    'blue'
+                  }
+                >
+                  {selectedAssignment.status === 'submitted' ? 'Submitted' : getDaysRemaining(selectedAssignment.dueDate)}
+                </Tag>
+              </div>
+            </div>
+            
+            <Divider />
+            
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2">Description</h4>
+              <p className="whitespace-pre-line">{selectedAssignment.description}</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <h4 className="font-semibold mb-2">Due Date</h4>
+                <p>{formatDate(selectedAssignment.dueDate)}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-2">Points</h4>
+                <p>{selectedAssignment.maxPoints} points possible</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-2">Accepted File Types</h4>
+                <p>{selectedAssignment.fileType}</p>
+              </div>
+            </div>
+            
+            <Divider />
+            
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Submission Requirements</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Files must be in {selectedAssignment.fileType} format</li>
+                <li>Maximum file size: 10MB</li>
+                <li>{selectedAssignment.allowsMultipleFiles ? 'Multiple files allowed' : 'Only one file allowed'}</li>
+                <li>Late submissions may be subject to penalty</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
+
+// Grade Icon component
+const GradeIcon = (props: any) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M12 22l-3-1.5L6 22l-2-9.5L12 4l8 8.5L18 22l-3-1.5L12 22z" />
+  </svg>
+);
 
 export default AssignmentManagement; 

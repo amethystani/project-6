@@ -265,7 +265,7 @@ const ResourceAllocation = () => {
       title: 'Description',
       dataIndex: ['course', 'description'],
       key: 'description',
-      width: '15%',
+      width: '12%',
       ellipsis: true,
       render: (description: string) => (
         <Tooltip placement="topLeft" title={description}>
@@ -308,7 +308,7 @@ const ResourceAllocation = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: '12%',
+      width: '15%',
       render: (_: any, record: CourseApproval) => {
         if (record.status !== 'pending') {
           return null;

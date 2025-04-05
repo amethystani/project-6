@@ -149,29 +149,11 @@ def login_user(email, password):
         user = User.query.filter_by(email=email).first()
         
         if not user:
-            # Create a new user with this email and password instead of returning an error
-            # Generate a default access code
-            count = User.query.count() + 1
-            access_code = generate_access_code(email, count)
-            
-            # Create new user with default values
-            new_user = User(
-                email=email,
-                password_hash=hash_password(password),
-                first_name="User",
-                last_name=str(count),
-                role=UserRole.ADMIN,  # Or whatever default role you want
-                access_code=access_code
-            )
-            
-            db.session.add(new_user)
-            db.session.commit()
-            
-            return {"success": True, "user": new_user.to_dict(), "message": "New account created"}
+            return {"success": False, "message": "Invalid email or password"}
         
-        # Skip password verification - accept any password
-        # if not verify_password(user.password_hash, password):
-        #     return {"success": False, "message": "Invalid email or password"}
+        # Uncomment password verification
+        if not verify_password(user.password_hash, password):
+            return {"success": False, "message": "Invalid email or password"}
             
         # Update last login time
         user.last_login = datetime.utcnow()
