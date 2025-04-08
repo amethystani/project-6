@@ -32,7 +32,7 @@ import {
 import { cn } from '../lib/utils';
 import ChartsComponent from '../components/ChartsComponent';
 import axios from 'axios';
-import { Button } from 'antd';
+import { Button, Badge } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useAuth } from '../lib/auth';
 
@@ -790,36 +790,142 @@ export default function Dashboard() {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions - Takes 1 column on large screens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Quick Actions */}
         <div className="bg-background border border-border rounded-lg p-4 md:p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center">
-            <Activity className="h-5 w-5 mr-2 text-primary" />
+          <h2 className="text-xl font-bold flex items-center mb-4">
+            <ArrowRight className="h-5 w-5 mr-2 text-primary" />
             Quick Actions
           </h2>
-          <div className="space-y-3">
-            {getQuickActions().map((action, index) => (
-              <Link
-                key={index}
-                to={action.link}
-                className="block group"
-              >
-                <div className="border border-border hover:border-primary rounded-lg p-4 transition-all duration-300 hover:bg-primary/5">
-                  <div className="flex items-center">
-                    <div className={cn("p-2 rounded-full mr-3", action.color ? `text-[${action.color}] bg-[${action.color}]/10` : "text-primary bg-primary/10")}>
-                      {React.createElement(action.icon, { className: "h-5 w-5" })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {user?.role === 'student' ? (
+              <>
+                {studentActions.map((action, index) => (
+                  <Link
+                    key={index}
+                    to={action.link}
+                    className="flex items-start p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  >
+                    <div className={`p-2 rounded-lg ${action.color || 'bg-primary/10'}`}>
+                      <action.icon className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex-1">
+                    <div className="ml-3">
                       <h3 className="font-medium">{action.title}</h3>
                       <p className="text-sm text-muted-foreground">{action.description}</p>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </Link>
-            ))}
+                  </Link>
+                ))}
+              </>
+            ) : user?.role === 'faculty' ? (
+              <>
+                {facultyActions.map((action, index) => (
+                  <Link
+                    key={index}
+                    to={action.link}
+                    className="flex items-start p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  >
+                    <div className={`p-2 rounded-lg ${action.color || 'bg-primary/10'}`}>
+                      <action.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="font-medium">{action.title}</h3>
+                      <p className="text-sm text-muted-foreground">{action.description}</p>
+                    </div>
+                  </Link>
+                ))}
+              </>
+            ) : null}
           </div>
         </div>
+
+        {/* Student-specific Available Courses Section */}
+        {user?.role === 'student' && (
+          <div className="bg-background border border-border rounded-lg p-4 md:p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-primary" />
+                Available Courses
+              </h2>
+              <Link 
+                to="/course-registration" 
+                className="text-primary hover:text-primary/80 text-sm font-medium flex items-center"
+              >
+                View All
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Link>
+            </div>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm truncate">CS101 - Introduction to Computer Science</h3>
+                  <p className="text-xs text-muted-foreground">3 Credits • Computer Science</p>
+                </div>
+                <Badge count={25} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm truncate">MATH201 - Linear Algebra</h3>
+                  <p className="text-xs text-muted-foreground">4 Credits • Mathematics</p>
+                </div>
+                <Badge count={30} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm truncate">ENG102 - Academic Writing</h3>
+                  <p className="text-xs text-muted-foreground">3 Credits • English</p>
+                </div>
+                <Badge count={20} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm truncate">PHYS101 - Physics I</h3>
+                  <p className="text-xs text-muted-foreground">4 Credits • Physics</p>
+                </div>
+                <Badge count={15} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm truncate">CHEM101 - General Chemistry</h3>
+                  <p className="text-xs text-muted-foreground">4 Credits • Chemistry</p>
+                </div>
+                <Badge count={18} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
+              </div>
+            </div>
+            <Link
+              to="/course-registration"
+              className="block w-full text-center py-2 mt-3 text-primary hover:text-primary/80 text-sm font-medium border-t border-border"
+            >
+              Browse More Courses
+            </Link>
+          </div>
+        )}
+
+        {/* Faculty-specific Course Management Tools */}
+        {user?.role === 'faculty' && (
+          <div className="bg-background border border-border rounded-lg p-4 md:p-6">
+            <h2 className="text-xl font-bold flex items-center mb-4">
+              <BookOpen className="h-5 w-5 mr-2 text-primary" />
+              Course Management Tools
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {courseManagementTools.map((tool, index) => (
+                <Link
+                  key={index}
+                  to={tool.link}
+                  className="flex items-start p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                >
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <tool.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="font-medium">{tool.title}</h3>
+                    <p className="text-sm text-muted-foreground">{tool.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Calendar - Takes 2 columns on large screens */}
         <div className="bg-background border border-border rounded-lg p-4 md:p-6 lg:col-span-2">

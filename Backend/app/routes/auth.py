@@ -24,7 +24,12 @@ def check_user():
     result = check_user_exists(data['email'])
     
     if result["success"]:
-        return jsonify(result), 200
+        # Return the appropriate response based on existence
+        if result.get("exists", False):
+            return jsonify(result), 200
+        else:
+            # User does not exist
+            return jsonify(result), 404
     else:
         return jsonify(result), 400
 

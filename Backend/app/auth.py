@@ -47,18 +47,11 @@ def check_user_exists(email):
                 }
             }
         else:
-            # Instead of returning false for exists, pretend user exists 
-            # but needs password setup so frontend will attempt login
+            # Return user not found instead of pretending user exists with admin role
             return {
                 "success": True, 
-                "exists": True, 
-                "needs_setup": False,
-                "user_details": {
-                    "email": email,
-                    "first_name": "User",
-                    "last_name": "",
-                    "role": UserRole.ADMIN.value
-                }
+                "exists": False, 
+                "message": "User not found"
             }
         
     except EmailNotValidError as e:

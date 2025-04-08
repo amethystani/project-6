@@ -14,6 +14,11 @@ def get_courses():
         # Get query parameters for filtering
         department = request.args.get('department')
         is_active = request.args.get('is_active')
+        search = request.args.get('search')  # Search in course_code and title
+        credits = request.args.get('credits')  # Filter by credits
+        semester = request.args.get('semester')  # Filter by semester
+        min_capacity = request.args.get('min_capacity')  # Filter by minimum capacity
+        max_capacity = request.args.get('max_capacity')  # Filter by maximum capacity
         
         # Build the query
         query = Course.query
@@ -24,6 +29,26 @@ def get_courses():
         if is_active:
             is_active_bool = is_active.lower() == 'true'
             query = query.filter_by(is_active=is_active_bool)
+            
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (Course.course_code.ilike(search_term)) |
+                (Course.title.ilike(search_term)) |
+                (Course.description.ilike(search_term))
+            )
+            
+        if credits:
+            query = query.filter_by(credits=credits)
+            
+        if semester:
+            query = query.filter_by(semester=semester)
+            
+        if min_capacity:
+            query = query.filter(Course.capacity >= int(min_capacity))
+            
+        if max_capacity:
+            query = query.filter(Course.capacity <= int(max_capacity))
         
         courses = query.all()
         return jsonify({

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Table, Tag, message, Tooltip, Modal, Input, Select, Badge, Divider } from 'antd';
+import { Button, Card, Table, Tag, message, Tooltip, Modal, Input, Select, Badge, Divider, InputNumber } from 'antd';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
 import { 
@@ -49,6 +49,9 @@ const CourseRegistration: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('');
   const [creditsFilter, setCreditsFilter] = useState<number | null>(null);
+  const [semesterFilter, setSemesterFilter] = useState<string>('');
+  const [minCapacity, setMinCapacity] = useState<number | null>(null);
+  const [maxCapacity, setMaxCapacity] = useState<number | null>(null);
   const [courseDetailsVisible, setCourseDetailsVisible] = useState(false);
   const [courseDetail, setCourseDetail] = useState<Course | null>(null);
   const [totalCredits, setTotalCredits] = useState(0);
@@ -57,118 +60,26 @@ const CourseRegistration: React.FC = () => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      // In a real implementation, replace this with actual API call
-      // const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/courses?is_active=true`, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      // Mock data
-      const mockCourses = [
-        {
-          id: 1,
-          course_code: "CS101",
-          title: "Introduction to Computer Science",
-          description: "An introductory course covering the fundamentals of computer science, programming concepts, and problem-solving techniques.",
-          credits: 3,
-          department: "Computer Science",
-          prerequisites: "None",
-          capacity: 30,
-          is_active: true,
-          created_at: "2023-01-15T10:00:00",
-          created_by: 1
-        },
-        {
-          id: 2,
-          course_code: "MATH201",
-          title: "Calculus I",
-          description: "Introduction to differential and integral calculus of functions of one variable.",
-          credits: 4,
-          department: "Mathematics",
-          prerequisites: "High school algebra and trigonometry",
-          capacity: 25,
-          is_active: true,
-          created_at: "2023-01-16T10:00:00",
-          created_by: 2
-        },
-        {
-          id: 3,
-          course_code: "ENG102",
-          title: "Academic Writing",
-          description: "Development of academic writing skills including research, critical analysis, and argumentation.",
-          credits: 3,
-          department: "English",
-          prerequisites: "ENG101",
-          capacity: 20,
-          is_active: true,
-          created_at: "2023-01-17T10:00:00",
-          created_by: 3
-        },
-        {
-          id: 4,
-          course_code: "PHYS101",
-          title: "Physics I: Mechanics",
-          description: "Introduction to Newtonian mechanics, including kinematics, dynamics, energy, and momentum.",
-          credits: 4,
-          department: "Physics",
-          prerequisites: "MATH201 (co-requisite)",
-          capacity: 24,
-          is_active: true,
-          created_at: "2023-01-18T10:00:00",
-          created_by: 4
-        },
-        {
-          id: 5,
-          course_code: "CS201",
-          title: "Data Structures",
-          description: "Study of data structures and algorithms for manipulating them efficiently.",
-          credits: 3,
-          department: "Computer Science",
-          prerequisites: "CS101",
-          capacity: 28,
-          is_active: true,
-          created_at: "2023-01-19T10:00:00",
-          created_by: 1
-        },
-        {
-          id: 6,
-          course_code: "BIO101",
-          title: "Introduction to Biology",
-          description: "Overview of fundamental principles of biology, including cell structure, genetics, and evolution.",
-          credits: 4,
-          department: "Biology",
-          prerequisites: "None",
-          capacity: 30,
-          is_active: true,
-          created_at: "2023-01-20T10:00:00",
-          created_by: 5
-        },
-        {
-          id: 7,
-          course_code: "PSYCH101",
-          title: "Introduction to Psychology",
-          description: "Survey of the basic principles and research findings in psychology.",
-          credits: 3,
-          department: "Psychology",
-          prerequisites: "None",
-          capacity: 35,
-          is_active: true,
-          created_at: "2023-01-21T10:00:00",
-          created_by: 6
-        },
-        {
-          id: 8,
-          course_code: "CHEM101",
-          title: "General Chemistry",
-          description: "Introduction to the principles of chemistry, including atomic structure, bonding, and chemical reactions.",
-          credits: 4,
-          department: "Chemistry",
-          prerequisites: "None",
-          capacity: 24,
-          is_active: true,
-          created_at: "2023-01-22T10:00:00",
-          created_by: 7
-        }
-      ];
-      setCourses(mockCourses);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const params = new URLSearchParams();
+      
+      if (searchText) params.append('search', searchText);
+      if (departmentFilter) params.append('department', departmentFilter);
+      if (creditsFilter) params.append('credits', creditsFilter.toString());
+      if (semesterFilter) params.append('semester', semesterFilter);
+      if (minCapacity) params.append('min_capacity', minCapacity.toString());
+      if (maxCapacity) params.append('max_capacity', maxCapacity.toString());
+      params.append('is_active', 'true');
+      
+      const response = await axios.get(`${apiUrl}/api/courses?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.status === 'success') {
+        setCourses(response.data.data);
+      } else {
+        message.error('Failed to fetch courses');
+      }
     } catch (error) {
       console.error('Error fetching courses:', error);
       message.error('Failed to fetch available courses');
@@ -294,19 +205,6 @@ const CourseRegistration: React.FC = () => {
 
   // Get unique departments for filter
   const departments = Array.from(new Set(courses.map(course => course.department))).sort();
-
-  // Filter courses
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = 
-      course.course_code.toLowerCase().includes(searchText.toLowerCase()) ||
-      course.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchText.toLowerCase());
-    
-    const matchesDepartment = departmentFilter ? course.department === departmentFilter : true;
-    const matchesCredits = creditsFilter ? course.credits === creditsFilter : true;
-    
-    return matchesSearch && matchesDepartment && matchesCredits;
-  });
 
   const columns = [
     {
@@ -480,6 +378,7 @@ const CourseRegistration: React.FC = () => {
               style={{ width: 200 }}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
+              onSearch={fetchCourses}
               prefix={<Search size={16} className="text-gray-400" />}
             />
             <Select
@@ -502,9 +401,43 @@ const CourseRegistration: React.FC = () => {
               allowClear
               onClear={() => setCreditsFilter(null)}
             >
+              <Option value={2}>2 Credits</Option>
               <Option value={3}>3 Credits</Option>
               <Option value={4}>4 Credits</Option>
             </Select>
+            <Select
+              placeholder="Semester"
+              style={{ width: 150 }}
+              value={semesterFilter || undefined}
+              onChange={value => setSemesterFilter(value)}
+              allowClear
+              onClear={() => setSemesterFilter('')}
+            >
+              <Option value="Fall 2023">Fall 2023</Option>
+              <Option value="Spring 2024">Spring 2024</Option>
+              <Option value="Summer 2024">Summer 2024</Option>
+            </Select>
+            <InputNumber
+              placeholder="Min Capacity"
+              style={{ width: 120 }}
+              min={1}
+              value={minCapacity}
+              onChange={value => setMinCapacity(value)}
+            />
+            <InputNumber
+              placeholder="Max Capacity"
+              style={{ width: 120 }}
+              min={1}
+              value={maxCapacity}
+              onChange={value => setMaxCapacity(value)}
+            />
+            <Button 
+              type="primary" 
+              icon={<Search size={16} />}
+              onClick={fetchCourses}
+            >
+              Search
+            </Button>
             <Button 
               type="default" 
               icon={<Filter size={16} />}
@@ -512,6 +445,10 @@ const CourseRegistration: React.FC = () => {
                 setSearchText('');
                 setDepartmentFilter('');
                 setCreditsFilter(null);
+                setSemesterFilter('');
+                setMinCapacity(null);
+                setMaxCapacity(null);
+                fetchCourses();
               }}
             >
               Clear
@@ -520,7 +457,7 @@ const CourseRegistration: React.FC = () => {
         </div>
         <Card>
           <Table 
-            dataSource={filteredCourses} 
+            dataSource={courses} 
             columns={columns} 
             rowKey="id"
             loading={loading}

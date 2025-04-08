@@ -1,5 +1,5 @@
 from app.models import db, User, UserRole, Student, Faculty, Admin, DepartmentHead, Course, CourseApproval, Enrollment, ApprovalStatus
-from app.auth import hash_password, generate_access_code
+from app.password_utils import hash_password, generate_access_code
 
 def create_role_specific_profile(user, role):
     """Create role-specific profile for a user"""
@@ -46,7 +46,8 @@ def create_test_user(email, password, first_name, last_name, role, user_count):
         first_name=first_name,
         last_name=last_name,
         role=role,
-        access_code=access_code
+        access_code=access_code,
+        is_active=True
     )
     
     db.session.add(user)
@@ -66,7 +67,8 @@ def create_enrolled_user_without_password(email, first_name, last_name, role, us
         first_name=first_name,
         last_name=last_name,
         role=role,
-        access_code=access_code
+        access_code=access_code,
+        is_active=True
     )
     
     db.session.add(user)
@@ -166,32 +168,248 @@ def populate_test_data():
     
     if dept_head and admin:
         approved_courses = [
+            # Computer Science Department
             {
                 "course_code": "CS101",
                 "title": "Introduction to Programming",
-                "description": "An introduction to programming concepts using Python.",
+                "description": "An introduction to programming concepts using Python. Covers basic syntax, data types, control structures, and functions.",
                 "credits": 3,
                 "department": "Computer Science",
                 "prerequisites": "None",
-                "capacity": 30
+                "capacity": 40
+            },
+            {
+                "course_code": "CS102",
+                "title": "Object-Oriented Programming",
+                "description": "Introduction to object-oriented programming concepts using Java. Covers classes, inheritance, polymorphism, and encapsulation.",
+                "credits": 3,
+                "department": "Computer Science",
+                "prerequisites": "CS101",
+                "capacity": 35
             },
             {
                 "course_code": "CS201",
                 "title": "Data Structures and Algorithms",
-                "description": "Study of fundamental data structures and algorithms.",
+                "description": "Study of fundamental data structures and algorithms. Covers arrays, linked lists, trees, graphs, sorting, and searching algorithms.",
                 "credits": 4,
                 "department": "Computer Science",
-                "prerequisites": "CS101",
-                "capacity": 25
+                "prerequisites": "CS102",
+                "capacity": 30
             },
+            {
+                "course_code": "CS202",
+                "title": "Database Systems",
+                "description": "Introduction to database design and management. Covers SQL, normalization, indexing, and transaction management.",
+                "credits": 3,
+                "department": "Computer Science",
+                "prerequisites": "CS201",
+                "capacity": 35
+            },
+            {
+                "course_code": "CS301",
+                "title": "Operating Systems",
+                "description": "Study of operating system concepts including process management, memory management, file systems, and scheduling.",
+                "credits": 4,
+                "department": "Computer Science",
+                "prerequisites": "CS201",
+                "capacity": 30
+            },
+            {
+                "course_code": "CS302",
+                "title": "Computer Networks",
+                "description": "Introduction to computer networking concepts, protocols, and architecture. Covers OSI model, TCP/IP, and network security.",
+                "credits": 3,
+                "department": "Computer Science",
+                "prerequisites": "CS201",
+                "capacity": 35
+            },
+            {
+                "course_code": "CS401",
+                "title": "Software Engineering",
+                "description": "Software development methodologies, requirements engineering, design patterns, testing, and project management.",
+                "credits": 4,
+                "department": "Computer Science",
+                "prerequisites": "CS202, CS301",
+                "capacity": 30
+            },
+            {
+                "course_code": "CS402",
+                "title": "Artificial Intelligence",
+                "description": "Introduction to AI concepts including machine learning, neural networks, and natural language processing.",
+                "credits": 4,
+                "department": "Computer Science",
+                "prerequisites": "CS201, MATH201",
+                "capacity": 30
+            },
+
+            # Mathematics Department
             {
                 "course_code": "MATH101",
                 "title": "Calculus I",
-                "description": "Introduction to differential and integral calculus.",
-                "credits": 3,
+                "description": "Introduction to differential and integral calculus. Covers limits, derivatives, and basic integration techniques.",
+                "credits": 4,
                 "department": "Mathematics",
                 "prerequisites": "None",
                 "capacity": 40
+            },
+            {
+                "course_code": "MATH102",
+                "title": "Calculus II",
+                "description": "Advanced integration techniques, sequences, series, and applications of calculus.",
+                "credits": 4,
+                "department": "Mathematics",
+                "prerequisites": "MATH101",
+                "capacity": 35
+            },
+            {
+                "course_code": "MATH201",
+                "title": "Linear Algebra",
+                "description": "Study of vector spaces, linear transformations, matrices, and eigenvalues.",
+                "credits": 4,
+                "department": "Mathematics",
+                "prerequisites": "MATH101",
+                "capacity": 35
+            },
+            {
+                "course_code": "MATH202",
+                "title": "Discrete Mathematics",
+                "description": "Logic, sets, relations, functions, combinatorics, and graph theory.",
+                "credits": 3,
+                "department": "Mathematics",
+                "prerequisites": "MATH101",
+                "capacity": 40
+            },
+            {
+                "course_code": "MATH301",
+                "title": "Abstract Algebra",
+                "description": "Groups, rings, fields, and their applications in modern mathematics.",
+                "credits": 4,
+                "department": "Mathematics",
+                "prerequisites": "MATH201, MATH202",
+                "capacity": 30
+            },
+            {
+                "course_code": "MATH302",
+                "title": "Real Analysis",
+                "description": "Rigorous study of real numbers, sequences, series, and functions.",
+                "credits": 4,
+                "department": "Mathematics",
+                "prerequisites": "MATH102",
+                "capacity": 30
+            },
+
+            # Physics Department
+            {
+                "course_code": "PHYS101",
+                "title": "Physics I: Mechanics",
+                "description": "Classical mechanics, including kinematics, dynamics, energy, momentum, and rotational motion.",
+                "credits": 4,
+                "department": "Physics",
+                "prerequisites": "MATH101",
+                "capacity": 35
+            },
+            {
+                "course_code": "PHYS102",
+                "title": "Physics II: Electricity and Magnetism",
+                "description": "Electric fields, magnetic fields, electromagnetic waves, and Maxwell's equations.",
+                "credits": 4,
+                "department": "Physics",
+                "prerequisites": "PHYS101, MATH102",
+                "capacity": 35
+            },
+            {
+                "course_code": "PHYS201",
+                "title": "Modern Physics",
+                "description": "Special relativity, quantum mechanics, and atomic physics.",
+                "credits": 4,
+                "department": "Physics",
+                "prerequisites": "PHYS102, MATH201",
+                "capacity": 30
+            },
+            {
+                "course_code": "PHYS202",
+                "title": "Thermal Physics",
+                "description": "Thermodynamics, statistical mechanics, and kinetic theory.",
+                "credits": 3,
+                "department": "Physics",
+                "prerequisites": "PHYS101, MATH102",
+                "capacity": 30
+            },
+
+            # Chemistry Department
+            {
+                "course_code": "CHEM101",
+                "title": "General Chemistry I",
+                "description": "Atomic structure, chemical bonding, stoichiometry, and basic thermodynamics.",
+                "credits": 4,
+                "department": "Chemistry",
+                "prerequisites": "MATH101",
+                "capacity": 40
+            },
+            {
+                "course_code": "CHEM102",
+                "title": "General Chemistry II",
+                "description": "Chemical equilibrium, acids and bases, electrochemistry, and kinetics.",
+                "credits": 4,
+                "department": "Chemistry",
+                "prerequisites": "CHEM101",
+                "capacity": 35
+            },
+            {
+                "course_code": "CHEM201",
+                "title": "Organic Chemistry I",
+                "description": "Structure and reactivity of organic compounds, mechanisms, and synthesis.",
+                "credits": 4,
+                "department": "Chemistry",
+                "prerequisites": "CHEM102",
+                "capacity": 35
+            },
+            {
+                "course_code": "CHEM202",
+                "title": "Physical Chemistry",
+                "description": "Quantum mechanics, spectroscopy, and statistical thermodynamics.",
+                "credits": 4,
+                "department": "Chemistry",
+                "prerequisites": "CHEM102, MATH102, PHYS102",
+                "capacity": 30
+            },
+
+            # Biology Department
+            {
+                "course_code": "BIO101",
+                "title": "Introduction to Biology",
+                "description": "Cell structure, genetics, evolution, and basic biological processes.",
+                "credits": 4,
+                "department": "Biology",
+                "prerequisites": "None",
+                "capacity": 40
+            },
+            {
+                "course_code": "BIO102",
+                "title": "Cell Biology",
+                "description": "Detailed study of cell structure, function, and cellular processes.",
+                "credits": 4,
+                "department": "Biology",
+                "prerequisites": "BIO101, CHEM101",
+                "capacity": 35
+            },
+            {
+                "course_code": "BIO201",
+                "title": "Genetics",
+                "description": "Mendelian genetics, molecular genetics, and population genetics.",
+                "credits": 4,
+                "department": "Biology",
+                "prerequisites": "BIO101",
+                "capacity": 35
+            },
+            {
+                "course_code": "BIO202",
+                "title": "Molecular Biology",
+                "description": "DNA replication, transcription, translation, and gene regulation.",
+                "credits": 4,
+                "department": "Biology",
+                "prerequisites": "BIO102, CHEM102",
+                "capacity": 30
             }
         ]
         
