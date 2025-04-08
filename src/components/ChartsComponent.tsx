@@ -123,15 +123,92 @@ type ChartType = 'enrollment' | 'performance' | 'budget' | 'workload';
 
 interface ChartsComponentProps {
   defaultChart?: ChartType;
+  analyticsData?: Record<string, any>;
+  isLoading?: boolean;
 }
 
-export const ChartsComponent: React.FC<ChartsComponentProps> = ({ defaultChart = 'enrollment' }) => {
+export const ChartsComponent: React.FC<ChartsComponentProps> = ({ 
+  defaultChart = 'enrollment',
+  analyticsData = {},
+  isLoading = false
+}) => {
   const [activeChart, setActiveChart] = useState<ChartType>(defaultChart);
   const { theme } = useTheme();
   
   // Get colors based on theme
   const axisColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
   const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+  
+  // Process analytics data if it exists, otherwise use sample data
+  const getEnrollmentData = () => {
+    if (isLoading) {
+      return enrollmentData.map(item => ({ ...item, students: 0 }));
+    }
+    
+    if (analyticsData?.enrollment_statistics?.monthly_data) {
+      return Object.entries(analyticsData.enrollment_statistics.monthly_data).map(([month, count]) => ({
+        month,
+        students: count as number
+      }));
+    }
+    
+    return enrollmentData;
+  };
+  
+  const getPerformanceData = () => {
+    if (isLoading) {
+      return performanceData.map(item => ({ ...item, pass: 0, fail: 0 }));
+    }
+    
+    if (analyticsData?.course_statistics?.course_performance) {
+      return Object.entries(analyticsData.course_statistics.course_performance).map(([name, data]: [string, any]) => ({
+        name,
+        pass: data.pass_rate,
+        fail: 100 - data.pass_rate
+      }));
+    }
+    
+    return performanceData;
+  };
+  
+  const getBudgetData = () => {
+    if (isLoading) {
+      return budgetData.map(item => ({ ...item, value: 0 }));
+    }
+    
+    if (analyticsData?.budget_statistics?.allocation) {
+      return Object.entries(analyticsData.budget_statistics.allocation).map(([name, value]: [string, any]) => ({
+        name,
+        value: value as number
+      }));
+    }
+    
+    return budgetData;
+  };
+  
+  const getWorkloadData = () => {
+    if (isLoading) {
+      return facultyWorkloadData.map(item => ({ ...item, teaching: 0, research: 0, admin: 0, mentoring: 0 }));
+    }
+    
+    if (analyticsData?.faculty_statistics?.workload) {
+      return Object.entries(analyticsData.faculty_statistics.workload).map(([name, data]: [string, any]) => ({
+        name,
+        teaching: data.teaching || 0,
+        research: data.research || 0,
+        admin: data.administrative || 0,
+        mentoring: data.mentoring || 0
+      }));
+    }
+    
+    return facultyWorkloadData;
+  };
+  
+  // Use the processed data in the charts
+  const currentEnrollmentData = getEnrollmentData();
+  const currentPerformanceData = getPerformanceData();
+  const currentBudgetData = getBudgetData();
+  const currentWorkloadData = getWorkloadData();
   
   return (
     <div className="bg-background p-4 rounded-lg border border-border">
@@ -185,7 +262,7 @@ export const ChartsComponent: React.FC<ChartsComponentProps> = ({ defaultChart =
         {activeChart === 'enrollment' && (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={enrollmentData}
+              data={currentEnrollmentData}
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <defs>
@@ -213,7 +290,7 @@ export const ChartsComponent: React.FC<ChartsComponentProps> = ({ defaultChart =
         {activeChart === 'performance' && (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={performanceData}
+              data={currentPerformanceData}
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -231,7 +308,7 @@ export const ChartsComponent: React.FC<ChartsComponentProps> = ({ defaultChart =
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={budgetData}
+                data={currentBudgetData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -240,7 +317,7 @@ export const ChartsComponent: React.FC<ChartsComponentProps> = ({ defaultChart =
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
-                {budgetData.map((entry, index) => (
+                {currentBudgetData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -252,7 +329,7 @@ export const ChartsComponent: React.FC<ChartsComponentProps> = ({ defaultChart =
         {activeChart === 'workload' && (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={facultyWorkloadData}
+              data={currentWorkloadData}
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               layout="vertical"
             >

@@ -38,6 +38,7 @@ import { Button, Badge } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useAuth } from '../lib/auth';
 
+// Department Head specific stats - Update with real data
 const roleSpecificStats = {
   student: [
     { label: 'Enrolled Courses', value: '5', icon: BookOpen },
@@ -58,10 +59,10 @@ const roleSpecificStats = {
     { label: 'Resource Usage', value: '85%', icon: Server },
   ],
   head: [
-    { label: 'Department Size', value: '650', icon: Users },
-    { label: 'Faculty Members', value: '35', icon: GraduationCap },
-    { label: 'Course Success Rate', value: '92%', icon: BarChart },
-    { label: 'Budget Utilization', value: '75%', icon: Settings },
+    { label: 'Department Size', value: '0', icon: Users },
+    { label: 'Faculty Members', value: '0', icon: GraduationCap },
+    { label: 'Course Success Rate', value: '0%', icon: BarChart },
+    { label: 'Budget Utilization', value: '0%', icon: Settings },
   ],
   guest: [
     { label: 'Available Courses', value: '45', icon: BookOpen },
@@ -521,13 +522,12 @@ export default function Dashboard() {
   const location = useLocation();
   const { token } = useAuth();
   // New states for real-time data
-  const [departmentAnalytics, setDepartmentAnalytics] = useState<Record<string, number>>({});
+  const [departmentAnalytics, setDepartmentAnalytics] = useState<Record<string, any>>({});
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [busyDays, setBusyDays] = useState<number[]>([]);
-  
-  // Get current stats based on user role
-  const stats = roleSpecificStats[user?.role as keyof typeof roleSpecificStats] || roleSpecificStats.guest;
+  // State for storing stats to force re-render
+  const [stats, setStats] = useState(roleSpecificStats[user?.role as keyof typeof roleSpecificStats] || roleSpecificStats.guest);
   
   // Fetch real data when component mounts
   useEffect(() => {
@@ -544,6 +544,11 @@ export default function Dashboard() {
       generateCalendarEvents();
     }
   }, [user]);
+  
+  // Update the stats when role changes
+  useEffect(() => {
+    setStats(roleSpecificStats[user?.role as keyof typeof roleSpecificStats] || roleSpecificStats.guest);
+  }, [user?.role]);
 
   // Add the generateCalendarEvents function that creates role-specific events
   const generateCalendarEvents = () => {
@@ -745,15 +750,10 @@ export default function Dashboard() {
       if (response.data.status === 'success') {
         setDepartmentAnalytics(response.data.data);
         
-        // Update stats with real data
+        // Create a new copy of stats to update with real data
         const newStats = [...stats];
-        if (response.data.data.faculty_statistics && response.data.data.faculty_statistics.total_faculty !== undefined) {
-          newStats[1] = { 
-            ...newStats[1], 
-            value: response.data.data.faculty_statistics.total_faculty.toString() 
-          };
-        }
         
+        // Update Department Size (total enrollments)
         if (response.data.data.enrollment_statistics && response.data.data.enrollment_statistics.total_enrollments !== undefined) {
           newStats[0] = { 
             ...newStats[0], 
@@ -761,14 +761,35 @@ export default function Dashboard() {
           };
         }
         
-        if (response.data.data.course_statistics && response.data.data.course_statistics.active_courses !== undefined) {
-          const activePercent = response.data.data.course_statistics.active_courses / 
-                              (response.data.data.course_statistics.total_courses || 1) * 100;
-          newStats[2] = { 
-            ...newStats[2], 
-            value: `${Math.round(activePercent)}%`
+        // Update Faculty Members count
+        if (response.data.data.faculty_statistics && response.data.data.faculty_statistics.total_faculty !== undefined) {
+          newStats[1] = { 
+            ...newStats[1], 
+            value: response.data.data.faculty_statistics.total_faculty.toString() 
           };
         }
+        
+        // Update Course Success Rate
+        if (response.data.data.course_statistics && response.data.data.course_statistics.success_rate !== undefined) {
+          newStats[2] = { 
+            ...newStats[2], 
+            value: `${Math.round(response.data.data.course_statistics.success_rate)}%`
+          };
+        }
+        
+        // Update Budget Utilization
+        if (response.data.data.budget_statistics && response.data.data.budget_statistics.utilization_rate !== undefined) {
+          newStats[3] = { 
+            ...newStats[3], 
+            value: `${Math.round(response.data.data.budget_statistics.utilization_rate)}%`
+          };
+        }
+        
+        // Update the roleSpecificStats directly for the head role
+        roleSpecificStats.head = newStats;
+        
+        // Force a re-render by setting stats again
+        setStats(newStats);
       } else {
         console.error('Failed to fetch department analytics');
       }
@@ -842,10 +863,62 @@ export default function Dashboard() {
     }
   };
 
-  // Get appropriate insights based on role
+  // In the Dashboard component, add a function to get real insights
+  const getInsightsFromAnalytics = () => {
+    if (!departmentAnalytics || Object.keys(departmentAnalytics).length === 0) {
+      return departmentInsights;
+    }
+    
+    const realInsights = [];
+    
+    // Add enrollment insight if available
+    if (departmentAnalytics.enrollment_statistics?.trend_percentage) {
+      const enrollmentTrend = departmentAnalytics.enrollment_statistics.trend_percentage;
+      realInsights.push({
+        title: `Enrollment ${enrollmentTrend > 0 ? 'increased' : 'decreased'} in department`,
+        trend: enrollmentTrend > 0 ? 'up' : 'down',
+        percentage: `${Math.abs(enrollmentTrend)}%`
+      });
+    }
+    
+    // Add faculty insight if available
+    if (departmentAnalytics.faculty_statistics?.satisfaction_trend) {
+      const satisfactionTrend = departmentAnalytics.faculty_statistics.satisfaction_trend;
+      realInsights.push({
+        title: `Faculty satisfaction ${satisfactionTrend > 0 ? 'improved' : 'declined'}`,
+        trend: satisfactionTrend > 0 ? 'up' : 'down',
+        percentage: `${Math.abs(satisfactionTrend)}%`
+      });
+    }
+    
+    // Add budget insight if available
+    if (departmentAnalytics.budget_statistics?.utilization_trend) {
+      const budgetTrend = departmentAnalytics.budget_statistics.utilization_trend;
+      realInsights.push({
+        title: `Budget utilization ${budgetTrend > 0 ? 'increased' : 'decreased'}`,
+        trend: budgetTrend > 0 ? 'up' : 'down',
+        percentage: `${Math.abs(budgetTrend)}%`
+      });
+    }
+    
+    // Add research insight if available
+    if (departmentAnalytics.research_statistics?.publication_trend) {
+      const researchTrend = departmentAnalytics.research_statistics.publication_trend;
+      realInsights.push({
+        title: `Research publications ${researchTrend > 0 ? 'increased' : 'decreased'}`,
+        trend: researchTrend > 0 ? 'up' : 'down',
+        percentage: `${Math.abs(researchTrend)}%`
+      });
+    }
+    
+    // If we have insights from the API, return them, otherwise fallback to mock data
+    return realInsights.length > 0 ? realInsights : departmentInsights;
+  };
+
+  // Replace the getInsights function with the updated one
   const getInsights = () => {
     switch (user?.role) {
-      case 'head': return departmentInsights;
+      case 'head': return getInsightsFromAnalytics();
       case 'admin': return adminInsights;
       case 'faculty': return facultyInsights;
       case 'student': return studentInsights;
@@ -1043,6 +1116,7 @@ export default function Dashboard() {
       )}
 
       {/* Analytics Section */}
+      {/* Commenting out duplicate charts components
       {user?.role === 'head' && (
         <ChartsComponent defaultChart="enrollment" />
       )}
@@ -1054,6 +1128,7 @@ export default function Dashboard() {
       {user?.role === 'admin' && (
         <ChartsComponent defaultChart="budget" />
       )}
+      */}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1385,6 +1460,17 @@ export default function Dashboard() {
               </table>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Dashboard Charts - Only visible for roles that need analytics */}
+      {(user?.role === 'admin' || user?.role === 'head') && (
+        <div className="grid grid-cols-1 gap-6">
+          <ChartsComponent
+            defaultChart={user?.role === 'head' ? 'enrollment' : 'performance'}
+            analyticsData={departmentAnalytics} // Pass the analytics data to the charts component
+            isLoading={loadingAnalytics}
+          />
         </div>
       )}
     </div>
