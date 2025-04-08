@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { BookOpen, Users, BarChart, Calendar, Shield, MessageSquare, CheckCircle, ArrowRight, GraduationCap, LineChart, UserPlus, Star, Clock, Menu, X, Sun, Moon, Bell, ArrowUp, ChevronLeft, ChevronRight, Heart, LogOut } from 'lucide-react'
+import { BookOpen, Users, BarChart, Calendar, Shield, MessageSquare, CheckCircle, ArrowRight, GraduationCap, LineChart, UserPlus, Star, Clock, Menu, X, Bell, ArrowUp, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import { useAuthStore } from '../store/auth'
 
 // Types for custom button
@@ -148,17 +148,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
-              <div className={cn(
-                "relative w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white font-bold text-lg",
-                isPinkMode ? "bg-gradient-to-br from-pink-500 to-pink-600" : "bg-gradient-to-br from-primary to-primary/60"
-              )}>
-                <div className={cn(
-                  "absolute inset-0 animate-pulse-slow",
-                  isPinkMode ? "bg-pink-500/20" : "bg-primary/20"
-                )}></div>
-                <span className="relative z-10">U</span>
-              </div>
-              <span className="ml-3 text-xl font-bold tracking-tight">UDIS</span>
+              <img src="/assets/logo/logo.jpg" alt="Logo" className="h-12 w-auto mr-3 rounded" />
+              <span className="text-xl font-bold tracking-tight">UDIS</span>
             </div>
             
             {/* Desktop Navigation */}
@@ -243,31 +234,6 @@ export default function Landing() {
                   Sign In
                 </Button>
               )}
-              
-              {/* Theme toggle button */}
-              <button 
-                onClick={toggleTheme}
-                className="p-2 rounded-full hover:bg-accent transition-colors"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </button>
-              
-              {/* Easter egg: Pink mode toggle */}
-              <button 
-                onClick={() => setIsPinkMode(!isPinkMode)}
-                className={cn(
-                  "p-2 rounded-full transition-colors",
-                  isPinkMode ? "text-pink-500 hover:bg-pink-500/10" : "hover:bg-accent"
-                )}
-                aria-label="Toggle pink mode"
-              >
-                <Heart className={cn("h-5 w-5", isPinkMode && "fill-pink-500")} />
-              </button>
             </nav>
             
             {/* Mobile menu button */}
@@ -297,18 +263,6 @@ export default function Landing() {
                   Sign In
                 </Button>
               )}
-              
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-full hover:bg-accent transition-colors"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </button>
               <button
                 onClick={toggleMenu}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -1032,10 +986,8 @@ export default function Landing() {
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2 sm:col-span-1">
               <div className="flex items-center mb-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-base sm:text-lg">
-                  U
-                </div>
-                <span className="ml-3 text-lg sm:text-xl font-bold">UDIS</span>
+                <img src="/assets/logo/logo.jpg" alt="UDIS Logo" className="h-10 w-auto rounded mr-3" />
+                <span className="ml-1 text-lg sm:text-xl font-bold">UDIS</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 A comprehensive platform for managing academic information, resources, and processes.

@@ -11,15 +11,22 @@ import Landing from './pages/Landing';
 import ApprovalsManagement from './pages/head/ApprovalsManagement';
 import ResourceAllocation from './pages/admin/ResourceAllocation';
 import CourseManagement from './pages/faculty/CourseManagement';
+import GradeEntry from './pages/faculty/GradeEntry';
+import FacultyAnalytics from './pages/faculty/FacultyAnalytics';
+import FacultySchedule from './pages/faculty/Schedule';
 import CourseRegistration from './pages/student/CourseRegistration';
 import AssignmentManagement from './pages/student/AssignmentManagement';
 import AcademicRecords from './pages/student/AcademicRecords';
-import Schedule from './pages/student/Schedule';
+import StudentSchedule from './pages/student/Schedule';
 import AvailableCourses from './pages/student/AvailableCourses';
 import Profile from './pages/Profile';
 import DepartmentAnalytics from './pages/head/DepartmentAnalytics';
 import ReportingStrategy from './pages/head/ReportingStrategy';
 import ApprovalsPolicy from './pages/head/ApprovalsPolicy';
+import CourseMaterials from './pages/faculty/CourseMaterials';
+import CourseAssignments from './pages/faculty/CourseAssignments';
+import CourseRoster from './pages/faculty/CourseRoster';
+import CourseAnnouncements from './pages/faculty/CourseAnnouncements';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -139,14 +146,19 @@ function App() {
               <Route path="system-settings" element={<PlaceholderPage />} />
               {/* Faculty routes */}
               <Route path="course-management" element={<CourseManagement />} />
-              <Route path="grade-entry" element={<PlaceholderPage />} />
-              <Route path="faculty-analytics" element={<PlaceholderPage />} />
+              <Route path="course-management/materials" element={<CourseMaterials />} />
+              <Route path="course-management/assignments" element={<CourseAssignments />} />
+              <Route path="course-management/roster" element={<CourseRoster />} />
+              <Route path="course-management/announcements" element={<CourseAnnouncements />} />
+              <Route path="grade-entry" element={<GradeEntry />} />
+              <Route path="faculty-analytics" element={<FacultyAnalytics />} />
+              <Route path="faculty-schedule" element={<FacultySchedule />} />
               {/* Student routes */}
               <Route path="course-registration" element={<CourseRegistration />} />
               <Route path="available-courses" element={<AvailableCourses />} />
               <Route path="assignment-management" element={<AssignmentManagement />} />
               <Route path="academic-records" element={<AcademicRecords />} />
-              <Route path="schedule" element={<Schedule />} />
+              <Route path="student-schedule" element={<StudentSchedule />} />
               {/* Profile route */}
               <Route path="profile" element={<Profile />} />
             </Route>

@@ -13,11 +13,14 @@ import {
   Download,
   CheckCircle,
   XCircle,
-  ClipboardCheck
+  ClipboardCheck,
+  ArrowRight,
+  MessageSquare
 } from 'lucide-react';
-import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs } from 'antd';
+import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs, Card, Badge, Tooltip, Divider } from 'antd';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
+import { Link } from 'react-router-dom';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -37,6 +40,17 @@ interface Course {
   created_by: number;
 }
 
+interface CurrentCourse {
+  id: number;
+  course_code: string;
+  title: string;
+  students: number;
+  schedule: string;
+  room: string;
+  semester: string;
+  status: 'active' | 'upcoming' | 'completed';
+}
+
 interface CourseApproval {
   id: number;
   course_id: number;
@@ -49,36 +63,70 @@ interface CourseApproval {
   updated_at: string;
 }
 
+// Mock data for current courses
+const mockCurrentCourses: CurrentCourse[] = [
+  {
+    id: 1,
+    course_code: 'CS101',
+    title: 'Introduction to Programming',
+    students: 32,
+    schedule: 'Mon, Wed 9:00-10:30 AM',
+    room: 'Room 201',
+    semester: 'Spring 2024',
+    status: 'active'
+  },
+  {
+    id: 2,
+    course_code: 'CS305',
+    title: 'Data Structures and Algorithms',
+    students: 28,
+    schedule: 'Tue, Thu 1:00-2:30 PM',
+    room: 'Room 105',
+    semester: 'Spring 2024',
+    status: 'active'
+  },
+  {
+    id: 3,
+    course_code: 'CS401',
+    title: 'Advanced Database Systems',
+    students: 22,
+    schedule: 'Mon, Wed 2:00-3:30 PM',
+    room: 'Room 405',
+    semester: 'Spring 2024',
+    status: 'active'
+  }
+];
+
 const CourseManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [courseApprovals, setCourseApprovals] = useState<CourseApproval[]>([]);
-  const [facultyCourses, setFacultyCourses] = useState<Course[]>([]);
+  const [facultyCourses, setFacultyCourses] = useState<CurrentCourse[]>(mockCurrentCourses);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { token } = useAuth();
   const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState('pending');
 
   const fetchCourseData = async () => {
     setLoading(true);
     try {
       // For a real implementation, this would fetch courses assigned to this faculty member
-      // Here we're using an empty array as placeholder
-      setFacultyCourses([]);
+      // Here we're using mock data
+      setFacultyCourses(mockCurrentCourses);
       
+      // No need to fetch course approvals anymore
       // Use a hardcoded API URL if the environment variable isn't available
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      // const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
       // Fetch course requests made by this faculty
-      const response = await axios.get(`${apiUrl}/api/courses/approvals`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // const response = await axios.get(`${apiUrl}/api/courses/approvals`, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // });
       
-      if (response.data.status === 'success') {
-        setCourseApprovals(response.data.data);
-      } else {
-        message.error('Failed to fetch course data');
-      }
+      // if (response.data.status === 'success') {
+      //   setCourseApprovals(response.data.data);
+      // } else {
+      //   message.error('Failed to fetch course data');
+      // }
     } catch (error) {
       console.error('Error fetching course data:', error);
       message.error('Failed to fetch course data');
@@ -170,10 +218,85 @@ const CourseManagement = () => {
     }
   };
 
-  const filteredApprovals = courseApprovals.filter(approval => {
-    if (activeTab === 'all') return true;
-    return approval.status === activeTab;
-  });
+  const getCourseStatusTag = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Tag color="green">Active</Tag>;
+      case 'upcoming':
+        return <Tag color="blue">Upcoming</Tag>;
+      case 'completed':
+        return <Tag color="gray">Completed</Tag>;
+      default:
+        return <Tag>Unknown</Tag>;
+    }
+  };
+
+  const currentCoursesColumns = [
+    {
+      title: 'Course Code',
+      dataIndex: 'course_code',
+      key: 'course_code',
+    },
+    {
+      title: 'Title',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: 'Students',
+      dataIndex: 'students',
+      key: 'students',
+      render: (students: number) => (
+        <div className="flex items-center">
+          <Users className="mr-2 h-4 w-4 text-blue-500" />
+          {students}
+        </div>
+      ),
+    },
+    {
+      title: 'Schedule',
+      dataIndex: 'schedule',
+      key: 'schedule',
+      render: (schedule: string) => (
+        <div className="flex items-center">
+          <Calendar className="mr-2 h-4 w-4 text-blue-500" />
+          {schedule}
+        </div>
+      ),
+    },
+    {
+      title: 'Room',
+      dataIndex: 'room',
+      key: 'room',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => getCourseStatusTag(status),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_: unknown, record: CurrentCourse) => (
+        <div className="flex space-x-2">
+          <Tooltip title="Manage Course Materials">
+            <Button type="text" icon={<FileText className="h-4 w-4" />} />
+          </Tooltip>
+          <Tooltip title="Manage Grades">
+            <Link to="/dashboard/grade-entry">
+              <Button type="text" icon={<Edit className="h-4 w-4" />} />
+            </Link>
+          </Tooltip>
+          <Tooltip title="View Analytics">
+            <Link to="/dashboard/faculty-analytics">
+              <Button type="text" icon={<Book className="h-4 w-4" />} />
+            </Link>
+          </Tooltip>
+        </div>
+      ),
+    },
+  ];
 
   const requestColumns = [
     {
@@ -219,164 +342,96 @@ const CourseManagement = () => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Course Management</h1>
+        <div className="flex items-center">
+          <img src="/assets/logo/logo.jpg" alt="Logo" className="h-10 w-auto mr-3 rounded" />
+          <h1 className="text-2xl font-bold flex items-center">
+            <Book className="mr-2 h-6 w-6 text-primary" />
+            Course Management
+          </h1>
+        </div>
         <Button 
-          type="primary" 
-          onClick={() => showModal()}
-          icon={<Plus size={16} className="mr-1" />}
+          type="default" 
+          icon={<MessageSquare size={16} className="mr-1" />}
           size="large"
+          onClick={() => window.location.href = 'mailto:department.head@university.edu?subject=New Course Request'}
         >
-          Request New Course
+          Contact Department Head
         </Button>
       </div>
 
       <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
         <p className="text-blue-700 flex items-center">
           <Book className="mr-2 h-5 w-5" />
-          As a faculty member, you can request new courses to be added to the curriculum. All requests will be reviewed before being approved.
+          As a faculty member, you can teach courses assigned to you by your department. New course proposals must be submitted directly to your department head via email.
+        </p>
+        <p className="text-blue-700 flex items-center mt-2">
+          <MessageSquare className="mr-2 h-5 w-5" />
+          Please contact your department head with course details including code, title, description, and justification for any new course requests.
         </p>
       </div>
 
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Your Course Requests</h2>
+        <h2 className="text-xl font-semibold mb-4">Courses You're Teaching</h2>
         
-        <Tabs 
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key)}
-          className="mb-4"
-        >
-          <TabPane tab="Pending" key="pending" />
-          <TabPane tab="Approved" key="approved" />
-          <TabPane tab="Rejected" key="rejected" />
-          <TabPane tab="All Requests" key="all" />
-        </Tabs>
-
-        {filteredApprovals.length === 0 ? (
+        {facultyCourses.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500 mb-2">No course requests with status "{activeTab === 'all' ? 'any' : activeTab}".</p>
-            <Button type="primary" onClick={showModal}>
-              Request a course now
-            </Button>
+            <p className="text-gray-500 mb-2">You are not currently teaching any courses.</p>
+            <p className="text-gray-500">Contact your department head to request new teaching assignments.</p>
           </div>
         ) : (
           <Table 
-            dataSource={filteredApprovals} 
-            columns={requestColumns} 
+            dataSource={facultyCourses} 
+            columns={currentCoursesColumns} 
             rowKey="id" 
             loading={loading}
             pagination={{ pageSize: 5 }}
           />
         )}
-      </div>
-
-      <Modal
-        title="Request New Course"
-        open={isModalVisible}
-        onCancel={handleCancel}
-        footer={null}
-        width={700}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="course_code"
-              label="Course Code"
-              rules={[{ required: true, message: 'Please enter course code' }]}
-            >
-              <Input placeholder="e.g., CS101" />
-            </Form.Item>
-
-            <Form.Item
-              name="title"
-              label="Course Title"
-              rules={[{ required: true, message: 'Please enter course title' }]}
-            >
-              <Input placeholder="e.g., Introduction to Programming" />
-            </Form.Item>
-          </div>
-
-          <Form.Item
-            name="description"
-            label="Course Description"
-            rules={[{ required: true, message: 'Please provide a course description' }]}
-          >
-            <TextArea rows={4} placeholder="Detailed course description including topics covered, learning objectives, etc." />
-          </Form.Item>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="department"
-              label="Department"
-              rules={[{ required: true, message: 'Please select department' }]}
-            >
-              <Select placeholder="Select department">
-                <Option value="Computer Science">Computer Science</Option>
-                <Option value="Mathematics">Mathematics</Option>
-                <Option value="Physics">Physics</Option>
-                <Option value="Chemistry">Chemistry</Option>
-                <Option value="Biology">Biology</Option>
-                <Option value="Engineering">Engineering</Option>
-                <Option value="Business">Business</Option>
-                <Option value="Arts">Arts</Option>
-                <Option value="Humanities">Humanities</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="credits"
-              label="Credits"
-              rules={[{ required: true, message: 'Please enter credits' }]}
-            >
-              <InputNumber min={1} max={6} placeholder="3" style={{ width: '100%' }} />
-            </Form.Item>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="prerequisites"
-              label="Prerequisites"
-              help="Comma-separated course codes (e.g., CS101, MATH101)"
-            >
-              <Input placeholder="e.g., CS101, MATH101" />
-            </Form.Item>
-
-            <Form.Item
-              name="capacity"
-              label="Maximum Capacity"
-              initialValue={30}
-              rules={[{ required: true, message: 'Please enter capacity' }]}
-            >
-              <InputNumber min={1} max={500} style={{ width: '100%' }} />
-            </Form.Item>
-          </div>
-
-          <Form.Item
-            name="justification"
-            label="Request Justification"
-            help="Provide a brief explanation for why this course should be added"
-          >
-            <TextArea rows={3} placeholder="Explain why this course would be valuable for students and your department" />
-          </Form.Item>
-
-          <div className="flex justify-end">
-            <Button htmlType="button" onClick={handleCancel} className="mr-2">
-              Cancel
-            </Button>
+        
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card title="Quick Links" className="shadow-sm hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <Link to="/dashboard/grade-entry" className="flex items-center text-blue-600 hover:text-blue-800">
+                <ArrowRight className="h-4 w-4 mr-2" /> Grade Entry
+              </Link>
+              <Link to="/dashboard/faculty-analytics" className="flex items-center text-blue-600 hover:text-blue-800">
+                <ArrowRight className="h-4 w-4 mr-2" /> Course Analytics
+              </Link>
+              <Link to="/dashboard/faculty-schedule" className="flex items-center text-blue-600 hover:text-blue-800">
+                <ArrowRight className="h-4 w-4 mr-2" /> Teaching Schedule
+              </Link>
+            </div>
+          </Card>
+          
+          <Card title="Teaching Stats" className="shadow-sm hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <p className="flex justify-between">
+                <span>Total Courses:</span>
+                <span className="font-semibold">{facultyCourses.length}</span>
+              </p>
+              <p className="flex justify-between">
+                <span>Total Students:</span>
+                <span className="font-semibold">{facultyCourses.reduce((sum, course) => sum + course.students, 0)}</span>
+              </p>
+              <p className="flex justify-between">
+                <span>Active Courses:</span>
+                <span className="font-semibold">{facultyCourses.filter(c => c.status === 'active').length}</span>
+              </p>
+            </div>
+          </Card>
+          
+          <Card title="Request New Course" className="shadow-sm hover:shadow-md transition-shadow">
+            <p className="mb-4 text-gray-600">Need to teach a new course? Contact your department head directly via email with your proposal.</p>
             <Button 
-              type="primary" 
-              htmlType="submit"
-              loading={submitting}
-              icon={<ClipboardCheck className="h-4 w-4 mr-1" />}
+              type="default" 
+              icon={<MessageSquare className="h-4 w-4 mr-1" />}
+              onClick={() => window.location.href = 'mailto:department.head@university.edu?subject=New Course Request&body=Dear Department Head,%0D%0A%0D%0AI would like to request a new course with the following details:%0D%0A%0D%0ACourse Code:%0D%0ATitle:%0D%0ADescription:%0D%0ACredits:%0D%0APrerequisites:%0D%0AJustification:%0D%0A%0D%0AThank you for your consideration.%0D%0A%0D%0ARegards,%0D%0A[Your Name]'}
             >
-              Submit for Approval
+              Email Department Head
             </Button>
-          </div>
-        </Form>
-      </Modal>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

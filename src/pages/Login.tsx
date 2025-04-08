@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { useAuthStore, guestUsers } from '../store/auth';
+import { useAuthStore } from '../store/auth';
 import { UserRole } from '../types';
-import { Moon, Sun, User, ChevronLeft, GraduationCap, BookOpen, Shield, BarChart, LucideIcon } from 'lucide-react';
-import { useTheme } from '../components/ThemeProvider';
+import { ChevronLeft, GraduationCap, BookOpen, Shield, BarChart, Home, LucideIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 // Helper function to map between frontend and backend role names
@@ -33,7 +32,6 @@ export default function Login() {
   } | null>(null);
   const { setUser } = useAuthStore();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
 
   const checkUser = async () => {
     if (!email) {
@@ -124,9 +122,6 @@ export default function Login() {
       return;
     }
 
-    // Set a fixed access code for faculty, admin, and head roles
-    const accessCodeValue = "snu";
-    
     // Map role to backend format
     const backendRole = mapRoleToBackend(selectedRole);
 
@@ -175,9 +170,6 @@ export default function Login() {
       toast.error('Password must be at least 8 characters long');
       return;
     }
-
-    // Set a fixed access code for faculty, admin, and head roles
-    const accessCodeValue = "snu";
     
     // Map role to backend format
     const backendRole = mapRoleToBackend(selectedRole);
@@ -200,15 +192,11 @@ export default function Login() {
       const data = await response.json();
 
       if (data.success) {
-        // Don't automatically sign in
-        // localStorage.setItem('token', data.access_token);
-        // setUser(data.user);
         toast.success('Registration successful! Please sign in with your new account.');
         
         // Switch to login mode and keep the email filled
         setIsRegisterMode(false);
         setPassword('');
-        // navigate('/dashboard');
       } else {
         toast.error(data.message || 'Registration failed');
       }
@@ -216,12 +204,6 @@ export default function Login() {
       console.error('Registration error:', error);
       toast.error('Failed to register. Please try again later.');
     }
-  };
-
-  const handleGuestLogin = (role: UserRole) => {
-    setUser(guestUsers[role]);
-    toast.success(`Logged in as ${role}`);
-    navigate('/dashboard');
   };
 
   const goBack = () => {
@@ -246,24 +228,17 @@ export default function Login() {
   // Render first-time setup screen
   if (isFirstTimeSetup && userDetails) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-background to-background/80">
         <div className="absolute top-4 right-4">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-primary/10"
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </button>
+          <Link to="/" className="p-2 rounded-full hover:bg-primary/10 flex items-center justify-center">
+            <Home className="h-5 w-5" />
+          </Link>
         </div>
 
         <div className="glass-card w-full max-w-md">
           <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
+            <div className="w-20 h-20 flex items-center justify-center">
+              <img src="/assets/logo/logo.jpg" alt="University Logo" className="h-16 w-auto" />
             </div>
           </div>
           
@@ -315,7 +290,7 @@ export default function Login() {
                 minLength={8}
               />
             </div>
-            <button type="submit" className="button-primary w-full">
+            <button type="submit" className="button-primary w-full backdrop-blur-sm bg-primary/90 shadow-lg border border-primary/20 hover:bg-primary/80 hover:shadow-primary/10 transition-all">
               Set Password & Login
             </button>
           </form>
@@ -325,24 +300,17 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-background to-background/80">
       <div className="absolute top-4 right-4">
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-full hover:bg-primary/10"
-        >
-          {theme === 'dark' ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-        </button>
+        <Link to="/" className="p-2 rounded-full hover:bg-primary/10 flex items-center justify-center">
+          <Home className="h-5 w-5" />
+        </Link>
       </div>
 
-      <div className="glass-card w-full max-w-4xl">
+      <div className="glass-card w-full max-w-md shadow-xl">
         <div className="flex justify-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-            <User className="h-6 w-6 text-primary" />
+          <div className="w-24 h-24 flex items-center justify-center">
+            <img src="/assets/logo/logo.jpg" alt="University Logo" className="h-20 w-auto" />
           </div>
         </div>
         
@@ -367,16 +335,18 @@ export default function Login() {
                 <>
                   <div className="flex justify-center gap-4 mb-6">
                     <button 
-                      className="button-primary px-8"
+                      className="button-primary px-8 backdrop-blur-md bg-primary/80 shadow-lg border border-white/10 hover:bg-primary/90 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden"
                       onClick={() => setIsRegisterMode(false)}
                     >
-                      Login
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-tr from-white/5 to-transparent"></span>
+                      <span className="relative z-10">Login</span>
                     </button>
                     <button 
-                      className="button-secondary px-8"
+                      className="button-secondary px-8 backdrop-blur-md bg-secondary/70 shadow-lg border border-white/10 hover:bg-secondary/80 hover:shadow-secondary/20 transition-all duration-300 relative overflow-hidden"
                       onClick={() => setIsRegisterMode(true)}
                     >
-                      Register
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-tr from-white/5 to-transparent"></span>
+                      <span className="relative z-10">Register</span>
                     </button>
                   </div>
                   
@@ -385,36 +355,25 @@ export default function Login() {
                       <input
                         type="email"
                         placeholder="Email"
-                        className="input-field"
+                        className="input-field backdrop-blur-md bg-background/60 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                       />
                     </div>
-                    <div className="flex">
+                    <div>
                       <input
                         type="password"
                         placeholder="Password"
-                        className="input-field flex-1"
+                        className="input-field backdrop-blur-md bg-background/60 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                       />
                     </div>
-                    {['faculty', 'admin', 'head'].includes(selectedRole) && (
-                      <div>
-                        <input
-                          type="password"
-                          placeholder={`${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} Access Code`}
-                          className="input-field"
-                          value="snu"
-                          readOnly
-                          required
-                        />
-                      </div>
-                    )}
-                    <button type="submit" className="button-primary w-full">
-                      Login
+                    <button type="submit" className="button-primary w-full backdrop-blur-md bg-primary/80 shadow-lg border border-white/10 hover:bg-primary/90 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group">
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/10 via-white/5 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000"></span>
+                      <span className="relative z-10">Login</span>
                     </button>
                   </form>
                 </>
@@ -422,16 +381,18 @@ export default function Login() {
                 <>
                   <div className="flex justify-center gap-4 mb-6">
                     <button 
-                      className="button-secondary px-8"
+                      className="button-secondary px-8 backdrop-blur-md bg-secondary/70 shadow-lg border border-white/10 hover:bg-secondary/80 hover:shadow-secondary/20 transition-all duration-300 relative overflow-hidden"
                       onClick={() => setIsRegisterMode(false)}
                     >
-                      Login
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-tr from-white/5 to-transparent"></span>
+                      <span className="relative z-10">Login</span>
                     </button>
                     <button 
-                      className="button-primary px-8"
+                      className="button-primary px-8 backdrop-blur-md bg-primary/80 shadow-lg border border-white/10 hover:bg-primary/90 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden"
                       onClick={() => setIsRegisterMode(true)}
                     >
-                      Register
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-tr from-white/5 to-transparent"></span>
+                      <span className="relative z-10">Register</span>
                     </button>
                   </div>
                   
@@ -440,7 +401,7 @@ export default function Login() {
                       <input
                         type="email"
                         placeholder="Email"
-                        className="input-field"
+                        className="input-field backdrop-blur-md bg-background/60 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -450,7 +411,7 @@ export default function Login() {
                       <input
                         type="password"
                         placeholder="Password"
-                        className="input-field"
+                        className="input-field backdrop-blur-md bg-background/60 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -461,27 +422,16 @@ export default function Login() {
                       <input
                         type="password"
                         placeholder="Confirm Password"
-                        className="input-field"
+                        className="input-field backdrop-blur-md bg-background/60 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         minLength={8}
                       />
                     </div>
-                    {['faculty', 'admin', 'head'].includes(selectedRole) && (
-                      <div>
-                        <input
-                          type="password"
-                          placeholder={`${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} Access Code`}
-                          className="input-field"
-                          value="snu"
-                          readOnly
-                          required
-                        />
-                      </div>
-                    )}
-                    <button type="submit" className="button-primary w-full">
-                      Register
+                    <button type="submit" className="button-primary w-full backdrop-blur-md bg-primary/80 shadow-lg border border-white/10 hover:bg-primary/90 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group">
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/10 via-white/5 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-1000"></span>
+                      <span className="relative z-10">Register</span>
                     </button>
                   </form>
                 </>
@@ -490,52 +440,34 @@ export default function Login() {
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-center mb-8">Select Your Role</h1>
-            <div className="grid grid-cols-4 gap-6 mb-8 px-4">
+            <h1 className="text-2xl font-bold text-center mb-8">University Department Information System</h1>
+            <p className="text-center text-foreground/70 mb-8">Please select your role to continue</p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-8">
               {mainRoles.map((role) => {
                 const Icon = roleIcons[role];
                 return (
                   <button
                     key={role}
                     onClick={() => setSelectedRole(role)}
-                    className="flex flex-col items-center p-6 rounded-xl border border-border hover:border-primary/50 transition-all duration-300 group relative bg-card"
+                    className="flex flex-col items-center p-6 rounded-xl border border-border/50 hover:border-primary/50 transition-all duration-300 group bg-card/80 backdrop-blur-sm hover:shadow-lg hover:shadow-primary/5"
                   >
-                    <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                      <Icon className="h-8 w-8 text-primary" />
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                      <Icon className="h-6 w-6 text-primary" />
                     </div>
-                    <span className="text-lg font-medium">
+                    <span className="text-sm font-medium">
                       {role === 'head' ? 'Department Head' : role.charAt(0).toUpperCase() + role.slice(1)}
                     </span>
-                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
                   </button>
                 );
               })}
             </div>
           </>
         )}
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-background text-foreground">
-              Or continue as guest
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4 px-4">
-          {mainRoles.map((role) => (
-            <button
-              key={role}
-              onClick={() => handleGuestLogin(role)}
-              className="button-secondary py-2"
-            >
-              {role === 'head' ? 'Department Head' : role.charAt(0).toUpperCase() + role.slice(1)}
-            </button>
-          ))}
-        </div>
+      </div>
+      
+      <div className="mt-6 text-sm text-foreground/60">
+        © 2024 University Learning Portal. All rights reserved.
       </div>
     </div>
   );

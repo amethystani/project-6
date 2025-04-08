@@ -153,10 +153,13 @@ const DepartmentAnalytics: React.FC = () => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <BarChartIcon className="mr-2 h-6 w-6 text-primary" />
-          Department Analytics: {analyticsData.department}
-        </h1>
+        <div className="flex items-center">
+          <img src="/assets/logo/logo.jpg" alt="Logo" className="h-10 w-auto mr-3 rounded" />
+          <h1 className="text-2xl font-bold flex items-center">
+            <BarChartIcon className="mr-2 h-6 w-6 text-primary" />
+            Department Analytics: {analyticsData.department}
+          </h1>
+        </div>
         <Button 
           onClick={fetchAnalyticsData} 
           icon={<RefreshCw size={16} className="mr-1" />}

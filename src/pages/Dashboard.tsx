@@ -29,7 +29,8 @@ import {
   CheckCircle,
   Plus,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  XCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ChartsComponent from '../components/ChartsComponent';
@@ -223,30 +224,30 @@ const facultyCourseRequests = [
 // Faculty specific quick actions
 const facultyActions = [
   {
-    title: 'Request New Course',
-    description: 'Submit a new course for approval',
-    icon: Plus,
-    link: '/course-management',
-    color: 'text-green-600'
-  },
-  {
-    title: 'Course Management',
-    description: 'Manage your courses',
+    title: 'Manage Courses',
+    description: 'Update course materials and syllabi',
     icon: BookOpen,
-    link: '/course-management',
+    link: '/dashboard/course-management',
     color: 'text-blue-600'
   },
-  { 
-    title: 'Grade Entry', 
-    description: 'Enter and manage grades', 
+  {
+    title: 'Grade Entry',
+    description: 'Enter and manage student grades',
     icon: FileSpreadsheet,
-    link: '/grade-entry' 
+    link: '/dashboard/grade-entry',
+    color: 'text-green-600'
+  },
+  { 
+    title: 'Class Schedules', 
+    description: 'View teaching timetable', 
+    icon: Calendar,
+    link: '/dashboard/faculty-schedule' 
   },
   { 
     title: 'Faculty Analytics', 
-    description: 'View performance metrics', 
+    description: 'View teaching performance metrics', 
     icon: BarChart,
-    link: '/faculty-analytics' 
+    link: '/dashboard/faculty-analytics' 
   },
 ];
 
@@ -275,28 +276,28 @@ const pendingGrades = [
 // Faculty course management tools
 const courseManagementTools = [
   {
-    title: 'Edit Syllabus',
-    description: 'Update course details and structure',
-    icon: FileText,
-    link: '/course-management/syllabus'
-  },
-  {
-    title: 'Class Lists',
-    description: 'View and manage student lists',
-    icon: Users,
-    link: '/course-management/class-lists'
-  },
-  {
-    title: 'Post Announcements',
-    description: 'Send updates to enrolled students',
-    icon: MessageSquare,
-    link: '/course-management/announcements'
-  },
-  {
-    title: 'Upload Materials',
-    description: 'Share study materials and resources',
+    title: 'Course Materials',
+    description: 'Upload lecture notes and resources',
     icon: Upload,
-    link: '/course-management/materials'
+    link: '/dashboard/course-management/materials'
+  },
+  {
+    title: 'Assignment Creation',
+    description: 'Create and manage assignments',
+    icon: FileText,
+    link: '/dashboard/course-management/assignments'
+  },
+  {
+    title: 'Student Roster',
+    description: 'View and manage class lists',
+    icon: Users,
+    link: '/dashboard/course-management/roster'
+  },
+  {
+    title: 'Announcements',
+    description: 'Send updates to your students',
+    icon: MessageSquare,
+    link: '/dashboard/course-management/announcements'
   }
 ];
 
@@ -362,26 +363,26 @@ const studentActions = [
     title: 'Course Registration',
     description: 'Register for courses',
     icon: BookOpen,
-    link: '/course-registration',
+    link: '/dashboard/course-registration',
     color: 'text-green-600'
   },
   { 
     title: 'Assignments', 
     description: 'View and submit assignments', 
     icon: FileText,
-    link: '/assignment-management' 
+    link: '/dashboard/assignment-management' 
   },
   { 
     title: 'Academic Records', 
     description: 'View your academic record', 
     icon: GraduationCap,
-    link: '/academic-records' 
+    link: '/dashboard/academic-records' 
   },
   { 
     title: 'Class Schedule', 
     description: 'View your class schedule', 
     icon: Calendar,
-    link: '/schedule' 
+    link: '/dashboard/student-schedule' 
   },
 ];
 
@@ -528,6 +529,8 @@ export default function Dashboard() {
   const [busyDays, setBusyDays] = useState<number[]>([]);
   // State for storing stats to force re-render
   const [stats, setStats] = useState(roleSpecificStats[user?.role as keyof typeof roleSpecificStats] || roleSpecificStats.guest);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<(typeof courseManagementTools)[0] | null>(null);
   
   // Fetch real data when component mounts
   useEffect(() => {
@@ -974,11 +977,14 @@ export default function Dashboard() {
       <div className="relative p-1 rounded-lg bg-gradient-to-r from-primary/50 via-secondary/50 to-primary/50 animate-gradient-x">
         <div className="bg-background p-4 md:p-6 rounded-lg">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Welcome back, {user?.name}</h1>
-              <p className="text-muted-foreground mt-1">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
+            <div className="flex items-center">
+              <img src="/assets/logo/logo.jpg" alt="Logo" className="h-12 w-auto mr-4 rounded" />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">Welcome back, {user?.name}</h1>
+                <p className="text-muted-foreground mt-1">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-2 mt-4 md:mt-0">
               <div className="bg-primary/10 px-4 py-2 rounded-md flex items-center">
@@ -1063,19 +1069,19 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Faculty-specific Course Requests Section */}
+      {/* Faculty-specific Current Teaching Load Section */}
       {user?.role === 'faculty' && (
         <div className="bg-background border border-border rounded-lg p-4 md:p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold flex items-center">
-              <ClipboardCheck className="h-5 w-5 mr-2 text-primary" />
-              Your Course Requests
+              <BookOpen className="h-5 w-5 mr-2 text-primary" />
+              Current Teaching Load
             </h2>
             <Link 
-              to="/course-management" 
+              to="/dashboard/course-management" 
               className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center"
             >
-              <Plus className="h-4 w-4 mr-1" /> New Request
+              <Plus className="h-4 w-4 mr-1" /> Add Course Materials
             </Link>
           </div>
           <div className="overflow-x-auto">
@@ -1083,30 +1089,42 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 px-4">Course Code</th>
-                  <th className="text-left py-2 px-4">Title</th>
-                  <th className="text-left py-2 px-4">Status</th>
-                  <th className="text-left py-2 px-4">Requested At</th>
+                  <th className="text-left py-2 px-4">Course Title</th>
+                  <th className="text-left py-2 px-4">Students</th>
+                  <th className="text-left py-2 px-4">Pending Grades</th>
+                  <th className="text-left py-2 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {facultyCourseRequests.map((request) => (
-                  <tr key={request.id} className="border-b border-border hover:bg-background/50">
-                    <td className="py-2 px-4">{request.courseCode}</td>
-                    <td className="py-2 px-4">{request.title}</td>
+                {coursePerformanceMetrics.map((course) => (
+                  <tr key={course.courseCode} className="border-b border-border hover:bg-background/50">
+                    <td className="py-2 px-4">{course.courseCode}</td>
+                    <td className="py-2 px-4">{course.courseName}</td>
                     <td className="py-2 px-4">
-                      <span 
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          request.status === 'pending' 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : request.status === 'approved' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {request.status}
+                      <div className="flex items-center">
+                        <Users className="h-4 w-4 mr-1 text-primary" />
+                        {Math.floor(Math.random() * 40) + 15}
+                      </div>
+                    </td>
+                    <td className="py-2 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        Math.random() > 0.5 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {Math.random() > 0.5 ? `${Math.floor(Math.random() * 10) + 1} pending` : 'None'}
                       </span>
                     </td>
-                    <td className="py-2 px-4">{request.requestedAt}</td>
+                    <td className="py-2 px-4">
+                      <div className="flex space-x-2">
+                        <Link to={`/dashboard/course-management/${course.courseCode.toLowerCase()}`} className="text-primary hover:underline text-sm">
+                          Manage
+                        </Link>
+                        <Link to={`/dashboard/grade-entry/${course.courseCode.toLowerCase()}`} className="text-primary hover:underline text-sm">
+                          Enter Grades
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

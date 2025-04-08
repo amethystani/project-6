@@ -60,7 +60,7 @@ const StudentNavigation = () => {
     { name: 'Available Courses', href: '/dashboard/available-courses', icon: BookOpen },
     { name: 'Assignments', href: '/dashboard/assignment-management', icon: FileText },
     { name: 'Academic Records', href: '/dashboard/academic-records', icon: GraduationCap },
-    { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
+    { name: 'Schedule', href: '/dashboard/student-schedule', icon: Calendar },
   ];
 
   return (
@@ -175,11 +175,11 @@ export default function Layout() {
   const getFacultyNav = () => (
     <nav className="px-2 space-y-1">
       {[
-        { name: 'Dashboard', href: '/', icon: Home },
-        { name: 'Course Management', href: '/course-management', icon: BookOpen },
-        { name: 'Grade Entry', href: '/grade-entry', icon: FileSpreadsheet },
-        { name: 'Faculty Analytics', href: '/faculty-analytics', icon: BarChart3 },
-        { name: 'Schedule', href: '/schedule', icon: Calendar },
+        { name: 'Dashboard', href: '/dashboard', icon: Home },
+        { name: 'Course Management', href: '/dashboard/course-management', icon: BookOpen },
+        { name: 'Grade Entry', href: '/dashboard/grade-entry', icon: FileSpreadsheet },
+        { name: 'Faculty Analytics', href: '/dashboard/faculty-analytics', icon: BarChart3 },
+        { name: 'Schedule', href: '/dashboard/faculty-schedule', icon: Calendar },
       ].map((item) => {
         const isActive = location.pathname === item.href;
         return (
@@ -211,11 +211,11 @@ export default function Layout() {
   const getAdminNav = () => (
     <nav className="px-2 space-y-1">
       {[
-        { name: 'Dashboard', href: '/', icon: Home },
-        { name: 'Course Approvals', href: '/resource-allocation', icon: ClipboardCheck },
-        { name: 'User Management', href: '/user-management', icon: Users },
-        { name: 'Audit Logs', href: '/audit-logs', icon: Activity },
-        { name: 'System Settings', href: '/system-settings', icon: Settings },
+        { name: 'Dashboard', href: '/dashboard', icon: Home },
+        { name: 'Course Approvals', href: '/dashboard/resource-allocation', icon: ClipboardCheck },
+        { name: 'User Management', href: '/dashboard/user-management', icon: Users },
+        { name: 'Audit Logs', href: '/dashboard/audit-logs', icon: Activity },
+        { name: 'System Settings', href: '/dashboard/system-settings', icon: Settings },
       ].map((item) => {
         const isActive = location.pathname === item.href;
         return (
@@ -251,10 +251,10 @@ export default function Layout() {
     user.role === 'student' ? <StudentNavigation /> :
     <nav className="px-2 space-y-1">
       <Link
-        to="/"
+        to="/dashboard"
         className={cn(
           "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
-          location.pathname === "/"
+          location.pathname === "/dashboard"
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
         )}
@@ -262,7 +262,7 @@ export default function Layout() {
         <Home
           className={cn(
             "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-            location.pathname === "/" ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+            location.pathname === "/dashboard" ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
           )}
           aria-hidden="true"
         />
@@ -332,7 +332,10 @@ export default function Layout() {
       >
         <div className="flex flex-col h-full">
           <div className="flex-1 flex flex-col pt-16 lg:pt-0">
-            <div className="flex items-center justify-center h-16 px-4 border-b">
+            <div className="flex items-center h-16 px-4 border-b">
+              <div className="mr-2">
+                <img src="/assets/logo/logo.jpg" alt="Logo" className="h-12 w-auto" />
+              </div>
               <h1 className="text-xl font-semibold">
                 {user.role === 'student' 
                   ? 'Student Portal' 
