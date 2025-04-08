@@ -838,68 +838,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Student-specific Available Courses Section */}
-        {user?.role === 'student' && (
-          <div className="bg-background border border-border rounded-lg p-4 md:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold flex items-center">
-                <BookOpen className="h-5 w-5 mr-2 text-primary" />
-                Available Courses
-              </h2>
-              <Link 
-                to="/course-registration" 
-                className="text-primary hover:text-primary/80 text-sm font-medium flex items-center"
-              >
-                View All
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Link>
-            </div>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm truncate">CS101 - Introduction to Computer Science</h3>
-                  <p className="text-xs text-muted-foreground">3 Credits • Computer Science</p>
-                </div>
-                <Badge count={25} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
-              </div>
-              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm truncate">MATH201 - Linear Algebra</h3>
-                  <p className="text-xs text-muted-foreground">4 Credits • Mathematics</p>
-                </div>
-                <Badge count={30} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
-              </div>
-              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm truncate">ENG102 - Academic Writing</h3>
-                  <p className="text-xs text-muted-foreground">3 Credits • English</p>
-                </div>
-                <Badge count={20} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
-              </div>
-              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm truncate">PHYS101 - Physics I</h3>
-                  <p className="text-xs text-muted-foreground">4 Credits • Physics</p>
-                </div>
-                <Badge count={15} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
-              </div>
-              <div className="flex items-center justify-between p-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm truncate">CHEM101 - General Chemistry</h3>
-                  <p className="text-xs text-muted-foreground">4 Credits • Chemistry</p>
-                </div>
-                <Badge count={18} style={{ backgroundColor: '#52c41a', marginLeft: '8px' }} />
-              </div>
-            </div>
-            <Link
-              to="/course-registration"
-              className="block w-full text-center py-2 mt-3 text-primary hover:text-primary/80 text-sm font-medium border-t border-border"
-            >
-              Browse More Courses
-            </Link>
-          </div>
-        )}
-
         {/* Faculty-specific Course Management Tools */}
         {user?.role === 'faculty' && (
           <div className="bg-background border border-border rounded-lg p-4 md:p-6">
@@ -1057,47 +995,6 @@ export default function Dashboard() {
             <Link to="/department-analytics" className="block mt-4 text-sm text-primary hover:underline">
               View all analytics →
             </Link>
-          </div>
-        </div>
-        
-        {/* Notifications - Takes full width */}
-        <div className="bg-background border border-border rounded-lg p-4 md:p-6 lg:col-span-3">
-          <h2 className="text-xl font-bold mb-4 flex items-center">
-            <Bell className="h-5 w-5 mr-2 text-primary" />
-            Recent Notifications
-          </h2>
-          <div className="space-y-3">
-            {notifications.map((notification) => (
-              <div key={notification.id} className={cn(
-                "p-3 rounded-lg border border-border flex items-start",
-                !notification.read ? "border-l-4 border-l-primary" : ""
-              )}>
-                <div className={cn(
-                  "p-2 rounded-full mr-3",
-                  !notification.read ? "bg-primary/10" : "bg-muted"
-                )}>
-                  <Bell className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <h3 className={cn(
-                      "font-medium",
-                      !notification.read ? "text-primary" : ""
-                    )}>
-                      {notification.title}
-                    </h3>
-                    <span className="text-xs text-muted-foreground">{notification.time}</span>
-                  </div>
-                  <p className="text-sm mt-1">{notification.message}</p>
-                </div>
-                {!notification.read && (
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                )}
-              </div>
-            ))}
-            <button className="btn-text w-full mt-2">
-              View All Notifications
-            </button>
           </div>
         </div>
       </div>

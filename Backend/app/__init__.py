@@ -4,11 +4,13 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+from config import Config
 
 load_dotenv()
 
 def create_app():
     app = Flask(__name__)
+    app.config.from_object(Config)
     
     # Configure CORS
     CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -59,10 +61,16 @@ def create_app():
     from app.routes.auth import auth_bp
     from app.routes.users import users_bp
     from app.routes.courses import courses_bp
+    from app.routes.enrollments import enrollments_bp
+    from app.routes.assignments import assignments_bp
+    from app.routes.notifications import notifications_bp
     
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
-    app.register_blueprint(courses_bp, url_prefix='/api')
+    app.register_blueprint(courses_bp, url_prefix='/api/courses')
+    app.register_blueprint(enrollments_bp, url_prefix='/api/enrollments')
+    app.register_blueprint(assignments_bp, url_prefix='/api/assignments')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     
     # Create database tables
     with app.app_context():

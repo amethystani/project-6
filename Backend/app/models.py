@@ -208,4 +208,36 @@ class Enrollment(db.Model):
             'enrollment_date': self.enrollment_date.isoformat() if self.enrollment_date else None,
             'status': self.status,
             'course': self.course.to_dict() if self.course else None
+        }
+
+# Notification model
+class NotificationType(enum.Enum):
+    INFO = "info"
+    WARNING = "warning"
+    SUCCESS = "success"
+    ERROR = "error"
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    read = db.Column(db.Boolean, nullable=False, default=False)
+    type = db.Column(db.Enum(NotificationType), nullable=False)
+    link = db.Column(db.String(200))  # Optional link to related content
+    
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'message': self.message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'read': self.read,
+            'type': self.type.value,
+            'link': self.link
         } 

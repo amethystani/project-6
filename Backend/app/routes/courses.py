@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.models import db, Course, CourseApproval, User, Enrollment, ApprovalStatus, UserRole
+from app.models import db, Course, CourseApproval, User, Enrollment, ApprovalStatus, UserRole, Student
 from app.auth import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
@@ -305,13 +305,19 @@ def enroll_in_course():
                 'message': 'Only students can enroll in courses'
             }), 403
             
-        # Get student profile
+        # Get student profile or create one if it doesn't exist
         student = user.student_profile
         if not student:
-            return jsonify({
-                'status': 'error',
-                'message': 'Student profile not found'
-            }), 404
+            # Create a new student profile
+            new_student = Student(
+                user_id=user.id,
+                student_id=f"S{user.id:06d}",  # Generate a student ID
+                program="Undeclared",
+                year_level=1
+            )
+            db.session.add(new_student)
+            db.session.commit()
+            student = new_student
             
         # Get request data
         data = request.get_json()
@@ -349,6 +355,31 @@ def enroll_in_course():
                 'status': 'error',
                 'message': 'Already enrolled in this course'
             }), 400
+        
+        # Check prerequisites
+        if course.prerequisites and course.prerequisites.strip() and course.prerequisites.lower() != 'none':
+            # Parse prerequisites (comma-separated course codes)
+            required_courses = [prereq.strip() for prereq in course.prerequisites.split(',') if prereq.strip() and prereq.lower() != 'none']
+            
+            if required_courses:  # Only check if there are actual prerequisites
+                # Get all courses the student is enrolled in
+                student_enrollments = Enrollment.query.filter_by(student_id=student.id).all()
+                enrolled_courses = [Course.query.get(enrollment.course_id) for enrollment in student_enrollments]
+                enrolled_course_codes = [enrolled_course.course_code for enrolled_course in enrolled_courses if enrolled_course]
+                
+                # Check if all prerequisites are met
+                missing_prerequisites = [prereq for prereq in required_courses if prereq not in enrolled_course_codes]
+                
+                if missing_prerequisites:
+                    print(f"Missing prerequisites: {missing_prerequisites}")
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Missing prerequisites',
+                        'details': {
+                            'missing_prerequisites': missing_prerequisites,
+                            'required_prerequisites': required_courses
+                        }
+                    }), 400
             
         # Create enrollment
         enrollment = Enrollment(

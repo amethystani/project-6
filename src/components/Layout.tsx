@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
+import { useAuth } from '../lib/auth';
+import axios from 'axios';
 import { 
   Moon, 
   Sun, 
@@ -23,10 +25,138 @@ import {
   Calendar,
   FileText,
   User,
-  ChevronDown
+  ChevronDown,
+  ChevronRight,
+  Book
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { cn } from '../lib/utils';
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+}
+
+interface Course {
+  id: number;
+  course_code: string;
+  title: string;
+  credits: number;
+}
+
+interface Enrollment {
+  id: number;
+  course: Course;
+}
+
+const StudentNavigation = () => {
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { token } = useAuth();
+  const location = useLocation();
+
+  const fetchEnrollments = async () => {
+    setLoading(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const response = await axios.get(`${apiUrl}/api/enrollments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.status === 'success') {
+        setEnrollments(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEnrollments();
+  }, []);
+
+  const mainNavItems = [
+    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Course Registration', href: '/dashboard/course-registration', icon: BookOpen },
+    { name: 'Available Courses', href: '/dashboard/available-courses', icon: BookOpen },
+    { name: 'Assignments', href: '/dashboard/assignment-management', icon: FileText },
+    { name: 'Academic Records', href: '/dashboard/academic-records', icon: GraduationCap },
+    { name: 'Schedule', href: '/dashboard/schedule', icon: Calendar },
+  ];
+
+  return (
+    <nav className="px-2 space-y-1 flex-1 overflow-y-auto hide-scrollbar">
+      {/* Main navigation items */}
+      {mainNavItems.map((item) => {
+        const isActive = location.pathname === item.href;
+        return (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200",
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-primary/10"
+            )}
+          >
+            <item.icon
+              className={cn(
+                "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                isActive ? "text-primary-foreground" : "text-primary"
+              )}
+              aria-hidden="true"
+            />
+            {item.name}
+          </Link>
+        );
+      })}
+
+      {/* Enrolled Courses Section */}
+      <div className="mt-8">
+        <h3 className="px-3 text-sm font-medium text-muted-foreground mb-2">
+          Enrolled Courses
+        </h3>
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+          </div>
+        ) : enrollments.length > 0 ? (
+          <div className="space-y-1">
+            {enrollments.map((enrollment) => (
+              <Link
+                key={enrollment.id}
+                to={`/course/${enrollment.course.id}`}
+                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md hover:bg-primary/10"
+              >
+                <Book
+                  className="mr-3 h-4 w-4 text-primary transition-transform duration-200 group-hover:scale-110"
+                  aria-hidden="true"
+                />
+                <div className="flex-1 truncate">
+                  <span className="block truncate">{enrollment.course.course_code}</span>
+                  <span className="block text-xs text-muted-foreground truncate">
+                    {enrollment.course.title}
+                  </span>
+                </div>
+                <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  {enrollment.course.credits} cr
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="px-3 py-2 text-sm text-muted-foreground">
+            No enrolled courses
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+};
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -85,15 +215,6 @@ export default function Layout() {
     { name: 'Schedule', href: '/schedule', icon: Calendar },
   ];
 
-  // Student specific navigation
-  const getStudentNav = () => [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Course Registration', href: '/course-registration', icon: BookOpen },
-    { name: 'Assignments', href: '/assignment-management', icon: FileText },
-    { name: 'Academic Records', href: '/academic-records', icon: GraduationCap },
-    { name: 'Schedule', href: '/schedule', icon: Calendar },
-  ];
-
   // Admin specific navigation
   const getAdminNav = () => [
     { name: 'Dashboard', href: '/', icon: Home },
@@ -108,7 +229,7 @@ export default function Layout() {
     user.role === 'head' ? getDepartmentHeadNav() : 
     user.role === 'admin' ? getAdminNav() : 
     user.role === 'faculty' ? getFacultyNav() :
-    user.role === 'student' ? getStudentNav() :
+    user.role === 'student' ? <StudentNavigation /> :
     [{ name: 'Dashboard', href: '/', icon: Home }];
 
   const toggleMobileMenu = () => {
@@ -294,32 +415,37 @@ export default function Layout() {
               </div>
             </div>
             
-            <nav className="px-2 space-y-1 flex-1 overflow-y-auto hide-scrollbar">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={cn(
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-primary/10"
-                    )}
-                  >
-                    <item.icon
+            {/* Navigation */}
+            {React.isValidElement(navigation) ? (
+              navigation
+            ) : (
+              <nav className="px-2 space-y-1 flex-1 overflow-y-auto hide-scrollbar">
+                {(navigation as NavItem[]).map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
                       className={cn(
-                        "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-                        isActive ? "text-primary-foreground" : "text-primary"
+                        "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-primary/10"
                       )}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
+                    >
+                      <item.icon
+                        className={cn(
+                          "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                          isActive ? "text-primary-foreground" : "text-primary"
+                        )}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
             
             <div className="px-4 mt-auto">
               <div className="rounded-md bg-primary/5 p-3">

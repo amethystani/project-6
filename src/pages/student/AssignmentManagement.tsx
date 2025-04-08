@@ -333,13 +333,6 @@ const AssignmentManagement = () => {
               />
             )}
           </Button>
-          
-          <div className="bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-lg flex items-center">
-            <GradeIcon className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-              Current GPA: {calculateGPA()}
-            </span>
-          </div>
         </div>
       </div>
       

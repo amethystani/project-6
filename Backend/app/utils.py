@@ -46,8 +46,7 @@ def create_test_user(email, password, first_name, last_name, role, user_count):
         first_name=first_name,
         last_name=last_name,
         role=role,
-        access_code=access_code,
-        is_active=True
+        access_code=access_code
     )
     
     db.session.add(user)
@@ -67,8 +66,7 @@ def create_enrolled_user_without_password(email, first_name, last_name, role, us
         first_name=first_name,
         last_name=last_name,
         role=role,
-        access_code=access_code,
-        is_active=True
+        access_code=access_code
     )
     
     db.session.add(user)
@@ -288,21 +286,12 @@ def populate_test_data():
                 "prerequisites": "MATH201, MATH202",
                 "capacity": 30
             },
-            {
-                "course_code": "MATH302",
-                "title": "Real Analysis",
-                "description": "Rigorous study of real numbers, sequences, series, and functions.",
-                "credits": 4,
-                "department": "Mathematics",
-                "prerequisites": "MATH102",
-                "capacity": 30
-            },
 
             # Physics Department
             {
                 "course_code": "PHYS101",
                 "title": "Physics I: Mechanics",
-                "description": "Classical mechanics, including kinematics, dynamics, energy, momentum, and rotational motion.",
+                "description": "Introduction to classical mechanics, including kinematics, dynamics, energy, and momentum.",
                 "credits": 4,
                 "department": "Physics",
                 "prerequisites": "MATH101",
@@ -311,7 +300,7 @@ def populate_test_data():
             {
                 "course_code": "PHYS102",
                 "title": "Physics II: Electricity and Magnetism",
-                "description": "Electric fields, magnetic fields, electromagnetic waves, and Maxwell's equations.",
+                "description": "Study of electric fields, magnetic fields, electromagnetic waves, and circuits.",
                 "credits": 4,
                 "department": "Physics",
                 "prerequisites": "PHYS101, MATH102",
@@ -320,19 +309,10 @@ def populate_test_data():
             {
                 "course_code": "PHYS201",
                 "title": "Modern Physics",
-                "description": "Special relativity, quantum mechanics, and atomic physics.",
+                "description": "Introduction to quantum mechanics, relativity, and atomic physics.",
                 "credits": 4,
                 "department": "Physics",
                 "prerequisites": "PHYS102, MATH201",
-                "capacity": 30
-            },
-            {
-                "course_code": "PHYS202",
-                "title": "Thermal Physics",
-                "description": "Thermodynamics, statistical mechanics, and kinetic theory.",
-                "credits": 3,
-                "department": "Physics",
-                "prerequisites": "PHYS101, MATH102",
                 "capacity": 30
             },
 
@@ -340,7 +320,7 @@ def populate_test_data():
             {
                 "course_code": "CHEM101",
                 "title": "General Chemistry I",
-                "description": "Atomic structure, chemical bonding, stoichiometry, and basic thermodynamics.",
+                "description": "Introduction to atomic structure, chemical bonding, and stoichiometry.",
                 "credits": 4,
                 "department": "Chemistry",
                 "prerequisites": "MATH101",
@@ -349,7 +329,7 @@ def populate_test_data():
             {
                 "course_code": "CHEM102",
                 "title": "General Chemistry II",
-                "description": "Chemical equilibrium, acids and bases, electrochemistry, and kinetics.",
+                "description": "Study of chemical equilibrium, thermodynamics, and electrochemistry.",
                 "credits": 4,
                 "department": "Chemistry",
                 "prerequisites": "CHEM101",
@@ -357,20 +337,11 @@ def populate_test_data():
             },
             {
                 "course_code": "CHEM201",
-                "title": "Organic Chemistry I",
-                "description": "Structure and reactivity of organic compounds, mechanisms, and synthesis.",
+                "title": "Organic Chemistry",
+                "description": "Study of carbon compounds, reaction mechanisms, and organic synthesis.",
                 "credits": 4,
                 "department": "Chemistry",
                 "prerequisites": "CHEM102",
-                "capacity": 35
-            },
-            {
-                "course_code": "CHEM202",
-                "title": "Physical Chemistry",
-                "description": "Quantum mechanics, spectroscopy, and statistical thermodynamics.",
-                "credits": 4,
-                "department": "Chemistry",
-                "prerequisites": "CHEM102, MATH102, PHYS102",
                 "capacity": 30
             },
 
@@ -378,7 +349,7 @@ def populate_test_data():
             {
                 "course_code": "BIO101",
                 "title": "Introduction to Biology",
-                "description": "Cell structure, genetics, evolution, and basic biological processes.",
+                "description": "Study of cell structure, genetics, and basic biological processes.",
                 "credits": 4,
                 "department": "Biology",
                 "prerequisites": "None",
@@ -390,25 +361,16 @@ def populate_test_data():
                 "description": "Detailed study of cell structure, function, and cellular processes.",
                 "credits": 4,
                 "department": "Biology",
-                "prerequisites": "BIO101, CHEM101",
+                "prerequisites": "BIO101",
                 "capacity": 35
             },
             {
                 "course_code": "BIO201",
                 "title": "Genetics",
-                "description": "Mendelian genetics, molecular genetics, and population genetics.",
+                "description": "Study of inheritance, gene expression, and genetic engineering.",
                 "credits": 4,
                 "department": "Biology",
-                "prerequisites": "BIO101",
-                "capacity": 35
-            },
-            {
-                "course_code": "BIO202",
-                "title": "Molecular Biology",
-                "description": "DNA replication, transcription, translation, and gene regulation.",
-                "credits": 4,
-                "department": "Biology",
-                "prerequisites": "BIO102, CHEM102",
+                "prerequisites": "BIO102",
                 "capacity": 30
             }
         ]

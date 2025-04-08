@@ -6,8 +6,10 @@ import {
   User, 
   ChevronLeft, 
   ChevronRight,
-  BookOpen
+  BookOpen,
+  X
 } from 'lucide-react';
+import { Modal, Badge, Divider } from 'antd';
 
 // Mock data for the schedule
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -93,6 +95,7 @@ const getDurationInSlots = (startTime: string, endTime: string) => {
 const Schedule = () => {
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [currentWeek, setCurrentWeek] = useState<string>('Current Week');
+  const [isModalVisible, setIsModalVisible] = useState(false);
   
   // Get today's date
   const today = new Date();
@@ -103,6 +106,15 @@ const Schedule = () => {
     const date = new Date();
     date.setDate(today.getDate() - today.getDay() + 1 + dayOffset); // Start from Monday
     return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+  };
+
+  const handleClassClick = (classId: string) => {
+    setSelectedClass(classId);
+    setIsModalVisible(true);
+  };
+
+  const getSelectedClassDetails = () => {
+    return CLASS_SCHEDULE.find(c => c.id === selectedClass);
   };
   
   return (
@@ -162,7 +174,7 @@ const Schedule = () => {
               
               {/* Empty cells for each day */}
               {DAYS_OF_WEEK.map(day => (
-                <div key={`${day}-${time}`} className="p-1 min-h-[60px] border-r last:border-r-0"></div>
+                <div key={`${day}-${time}`} className="p-1 min-h-[60px] border-r last:border-r-0 relative"></div>
               ))}
             </div>
           ))}
@@ -177,46 +189,87 @@ const Schedule = () => {
               return (
                 <div
                   key={`${classItem.id}-${day}`}
-                  className={`absolute border rounded-md p-2 cursor-pointer transition-all ${
-                    selectedClass === classItem.id 
-                      ? 'ring-2 ring-primary z-10' 
-                      : 'hover:shadow-md'
-                  } ${classItem.color}`}
+                  className={`absolute border rounded-md p-2 cursor-pointer transition-all hover:shadow-md ${classItem.color}`}
                   style={{
-                    top: `${startTimeIndex * 60 + 1}px`, // Each slot is 60px high
+                    top: `${startTimeIndex * 60}px`,
                     left: `${(dayIndex / 6) * 100}%`,
-                    width: `${(1 / 6) * 100 - 1}%`, // Subtract 1% for spacing
+                    width: `${(1 / 6) * 100 - 2}%`,
                     height: `${duration * 30}px`,
-                    transform: 'translateX(-50%)'
+                    transform: 'translateX(0)'
                   }}
-                  onClick={() => setSelectedClass(
-                    selectedClass === classItem.id ? null : classItem.id
-                  )}
+                  onClick={() => handleClassClick(classItem.id)}
                 >
                   <div className="text-sm font-medium truncate">{classItem.courseId}</div>
                   <div className="text-xs truncate">{classItem.courseName}</div>
-                  {selectedClass === classItem.id && (
-                    <div className="mt-2 text-xs space-y-1">
-                      <div className="flex items-center">
-                        <Clock size={12} className="mr-1" />
-                        {classItem.startTime} - {classItem.endTime}
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin size={12} className="mr-1" />
-                        {classItem.location}
-                      </div>
-                      <div className="flex items-center">
-                        <User size={12} className="mr-1" />
-                        {classItem.instructor}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })
           ))}
         </div>
       </div>
+      
+      {/* Course Details Modal */}
+      <Modal
+        title={null}
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+        closeIcon={<X className="text-gray-500 hover:text-gray-700" />}
+        width={500}
+        className="course-details-modal"
+      >
+        {getSelectedClassDetails() && (
+          <div className="py-4">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-2xl font-bold mb-1">{getSelectedClassDetails()?.courseId}</h3>
+                <h4 className="text-xl text-gray-700">{getSelectedClassDetails()?.courseName}</h4>
+              </div>
+              <Badge 
+                count={getSelectedClassDetails()?.days.length} 
+                style={{ 
+                  backgroundColor: '#1890ff',
+                  fontSize: '14px',
+                  padding: '0 8px',
+                  height: '24px',
+                  lineHeight: '24px'
+                }}
+                text="sessions/week"
+              />
+            </div>
+            
+            <Divider className="my-4" />
+            
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <Clock className="h-5 w-5 text-gray-500 mr-3" />
+                <div>
+                  <div className="font-medium">Schedule</div>
+                  <div className="text-gray-600">
+                    {getSelectedClassDetails()?.days.join(', ')} • {getSelectedClassDetails()?.startTime} - {getSelectedClassDetails()?.endTime}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <MapPin className="h-5 w-5 text-gray-500 mr-3" />
+                <div>
+                  <div className="font-medium">Location</div>
+                  <div className="text-gray-600">{getSelectedClassDetails()?.location}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-gray-500 mr-3" />
+                <div>
+                  <div className="font-medium">Instructor</div>
+                  <div className="text-gray-600">{getSelectedClassDetails()?.instructor}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
       
       {/* Course List */}
       <div className="mt-8">

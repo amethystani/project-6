@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Table, Tag, message, Tooltip, Modal, Input, Select, Badge, Divider, InputNumber } from 'antd';
+import { Button, Card, Table, Tag, message, Tooltip, Modal, Badge, Divider, Row, Col, Statistic, Spin } from 'antd';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
 import { 
   BookOpen, 
+  Calendar, 
   Clock, 
-  Filter,
-  Search,
-  Calendar,
-  Info,
-  AlertCircle,
+  CreditCard, 
+  Info, 
+  AlertCircle, 
   CheckCircle,
+  RefreshCw,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface Course {
   id: number;
@@ -36,57 +37,13 @@ interface Enrollment {
   course: Course;
 }
 
-const { Search: SearchInput } = Input;
-const { Option } = Select;
-
 const CourseRegistration: React.FC = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [loading, setLoading] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
-  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [searchText, setSearchText] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('');
-  const [creditsFilter, setCreditsFilter] = useState<number | null>(null);
-  const [semesterFilter, setSemesterFilter] = useState<string>('');
-  const [minCapacity, setMinCapacity] = useState<number | null>(null);
-  const [maxCapacity, setMaxCapacity] = useState<number | null>(null);
   const [courseDetailsVisible, setCourseDetailsVisible] = useState(false);
   const [courseDetail, setCourseDetail] = useState<Course | null>(null);
   const [totalCredits, setTotalCredits] = useState(0);
   const { token } = useAuth();
-
-  const fetchCourses = async () => {
-    setLoading(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const params = new URLSearchParams();
-      
-      if (searchText) params.append('search', searchText);
-      if (departmentFilter) params.append('department', departmentFilter);
-      if (creditsFilter) params.append('credits', creditsFilter.toString());
-      if (semesterFilter) params.append('semester', semesterFilter);
-      if (minCapacity) params.append('min_capacity', minCapacity.toString());
-      if (maxCapacity) params.append('max_capacity', maxCapacity.toString());
-      params.append('is_active', 'true');
-      
-      const response = await axios.get(`${apiUrl}/api/courses?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.status === 'success') {
-        setCourses(response.data.data);
-      } else {
-        message.error('Failed to fetch courses');
-      }
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      message.error('Failed to fetch available courses');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchEnrollments = async () => {
     setEnrollmentLoading(true);
@@ -101,19 +58,19 @@ const CourseRegistration: React.FC = () => {
           id: 1,
           student_id: 1,
           course_id: 1,
-          enrollment_date: "2023-04-01T09:00:00",
-          status: "enrolled",
+          enrollment_date: '2024-01-15',
+          status: 'active',
           course: {
             id: 1,
-            course_code: "CS101",
-            title: "Introduction to Computer Science",
-            description: "An introductory course covering the fundamentals of computer science, programming concepts, and problem-solving techniques.",
+            course_code: 'CS101',
+            title: 'Introduction to Computer Science',
+            description: 'An introductory course to computer science fundamentals',
             credits: 3,
-            department: "Computer Science",
-            prerequisites: "None",
+            department: 'Computer Science',
+            prerequisites: '',
             capacity: 30,
             is_active: true,
-            created_at: "2023-01-15T10:00:00",
+            created_at: '2024-01-01',
             created_by: 1
           }
         },
@@ -121,160 +78,51 @@ const CourseRegistration: React.FC = () => {
           id: 2,
           student_id: 1,
           course_id: 2,
-          enrollment_date: "2023-04-02T10:00:00",
-          status: "enrolled",
+          enrollment_date: '2024-01-15',
+          status: 'active',
           course: {
             id: 2,
-            course_code: "MATH201",
-            title: "Calculus I",
-            description: "Introduction to differential and integral calculus of functions of one variable.",
+            course_code: 'MATH201',
+            title: 'Linear Algebra',
+            description: 'Study of linear equations and their applications',
             credits: 4,
-            department: "Mathematics",
-            prerequisites: "High school algebra and trigonometry",
+            department: 'Mathematics',
+            prerequisites: 'MATH101',
             capacity: 25,
             is_active: true,
-            created_at: "2023-01-16T10:00:00",
-            created_by: 2
+            created_at: '2024-01-01',
+            created_by: 1
           }
         }
       ];
-      setEnrollments(mockEnrollments);
       
-      // Calculate total credits
-      const total = mockEnrollments.reduce((sum, enrollment) => 
-        sum + enrollment.course.credits, 0);
-      setTotalCredits(total);
+      setEnrollments(mockEnrollments);
+      setTotalCredits(mockEnrollments.reduce((sum, enrollment) => sum + enrollment.course.credits, 0));
     } catch (error) {
       console.error('Error fetching enrollments:', error);
-      message.error('Failed to fetch your enrollments');
+      message.error('Failed to fetch enrollments');
     } finally {
       setEnrollmentLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCourses();
     fetchEnrollments();
-  }, [token]);
-
-  const isEnrolled = (courseId: number) => {
-    return enrollments.some(enrollment => enrollment.course_id === courseId);
-  };
-
-  const handleEnrollClick = (course: Course) => {
-    setSelectedCourse(course);
-    setConfirmModalVisible(true);
-  };
-
-  const handleConfirmEnroll = async () => {
-    if (!selectedCourse) return;
-
-    try {
-      // In a real implementation, replace with actual API call
-      // await axios.post(
-      //   `${import.meta.env.VITE_API_URL}/api/enrollments`,
-      //   { course_id: selectedCourse.id },
-      //   { headers: { Authorization: `Bearer ${token}` } }
-      // );
-      
-      // Mock enrollment
-      const newEnrollment = {
-        id: enrollments.length + 1,
-        student_id: 1,
-        course_id: selectedCourse.id,
-        enrollment_date: new Date().toISOString(),
-        status: "enrolled",
-        course: selectedCourse
-      };
-      
-      setEnrollments([...enrollments, newEnrollment]);
-      setTotalCredits(totalCredits + selectedCourse.credits);
-      
-      message.success(`Successfully enrolled in ${selectedCourse.course_code}: ${selectedCourse.title}`);
-      setConfirmModalVisible(false);
-    } catch (error: any) {
-      console.error('Error enrolling in course:', error);
-      message.error(error.response?.data?.message || 'Failed to enroll in course');
-    }
-  };
+  }, []);
 
   const handleShowDetails = (course: Course) => {
     setCourseDetail(course);
     setCourseDetailsVisible(true);
   };
 
-  // Get unique departments for filter
-  const departments = Array.from(new Set(courses.map(course => course.department))).sort();
-
-  const columns = [
-    {
-      title: 'Course Code',
-      dataIndex: 'course_code',
-      key: 'course_code',
-      render: (text: string, record: Course) => (
-        <a onClick={() => handleShowDetails(record)}>{text}</a>
-      ),
-    },
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Department',
-      dataIndex: 'department',
-      key: 'department',
-      render: (department: string) => (
-        <Tag color="blue">{department}</Tag>
-      ),
-    },
-    {
-      title: 'Credits',
-      dataIndex: 'credits',
-      key: 'credits',
-      render: (credits: number) => (
-        <Badge count={credits} style={{ backgroundColor: '#52c41a' }} />
-      ),
-    },
-    {
-      title: 'Prerequisites',
-      dataIndex: 'prerequisites',
-      key: 'prerequisites',
-      render: (prerequisites: string) => prerequisites || 'None',
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_: any, record: Course) => {
-        const enrolled = isEnrolled(record.id);
-        return (
-          <div className="flex space-x-2">
-            <Button 
-              type={enrolled ? "default" : "primary"}
-              disabled={enrolled}
-              onClick={() => !enrolled && handleEnrollClick(record)}
-              icon={enrolled ? <CheckCircle size={16} /> : undefined}
-            >
-              {enrolled ? "Enrolled" : "Enroll"}
-            </Button>
-            <Button 
-              type="default" 
-              onClick={() => handleShowDetails(record)}
-              icon={<Info size={16} />}
-            >
-              Details
-            </Button>
-          </div>
-        );
-      },
-    },
-  ];
-
   const enrollmentColumns = [
     {
       title: 'Course Code',
       dataIndex: ['course', 'course_code'],
       key: 'course_code',
+      render: (text: string, record: Enrollment) => (
+        <a onClick={() => handleShowDetails(record.course)}>{text}</a>
+      ),
     },
     {
       title: 'Title',
@@ -308,7 +156,7 @@ const CourseRegistration: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'enrolled' ? 'green' : 'blue'}>
+        <Tag color={status === 'active' ? 'green' : 'red'}>
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </Tag>
       ),
@@ -319,14 +167,6 @@ const CourseRegistration: React.FC = () => {
     <div className="container mx-auto p-4">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Course Registration</h1>
-        <div className="flex items-center mt-4 md:mt-0">
-          <div className="bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-lg flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-              Spring 2023 Semester
-            </span>
-          </div>
-        </div>
       </div>
       
       {/* Current registration summary */}
@@ -348,14 +188,21 @@ const CourseRegistration: React.FC = () => {
       <div className="mb-8">
         <div className="flex flex-col md:flex-row justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">My Enrollments</h2>
-          <Button 
-            type="default" 
-            icon={<Clock size={16} />}
-            onClick={fetchEnrollments}
-            loading={enrollmentLoading}
-          >
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/dashboard/available-courses">
+              <Button type="primary" icon={<BookOpen size={16} />}>
+                Browse Available Courses
+              </Button>
+            </Link>
+            <Button 
+              type="default" 
+              icon={<Clock size={16} />}
+              onClick={fetchEnrollments}
+              loading={enrollmentLoading}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
         <Card>
           <Table 
@@ -369,147 +216,6 @@ const CourseRegistration: React.FC = () => {
         </Card>
       </div>
       
-      <div>
-        <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Available Courses</h2>
-          <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
-            <SearchInput
-              placeholder="Search courses"
-              style={{ width: 200 }}
-              value={searchText}
-              onChange={e => setSearchText(e.target.value)}
-              onSearch={fetchCourses}
-              prefix={<Search size={16} className="text-gray-400" />}
-            />
-            <Select
-              placeholder="Department"
-              style={{ width: 150 }}
-              value={departmentFilter || undefined}
-              onChange={value => setDepartmentFilter(value)}
-              allowClear
-              onClear={() => setDepartmentFilter('')}
-            >
-              {departments.map(dept => (
-                <Option key={dept} value={dept}>{dept}</Option>
-              ))}
-            </Select>
-            <Select
-              placeholder="Credits"
-              style={{ width: 120 }}
-              value={creditsFilter || undefined}
-              onChange={value => setCreditsFilter(value)}
-              allowClear
-              onClear={() => setCreditsFilter(null)}
-            >
-              <Option value={2}>2 Credits</Option>
-              <Option value={3}>3 Credits</Option>
-              <Option value={4}>4 Credits</Option>
-            </Select>
-            <Select
-              placeholder="Semester"
-              style={{ width: 150 }}
-              value={semesterFilter || undefined}
-              onChange={value => setSemesterFilter(value)}
-              allowClear
-              onClear={() => setSemesterFilter('')}
-            >
-              <Option value="Fall 2023">Fall 2023</Option>
-              <Option value="Spring 2024">Spring 2024</Option>
-              <Option value="Summer 2024">Summer 2024</Option>
-            </Select>
-            <InputNumber
-              placeholder="Min Capacity"
-              style={{ width: 120 }}
-              min={1}
-              value={minCapacity}
-              onChange={value => setMinCapacity(value)}
-            />
-            <InputNumber
-              placeholder="Max Capacity"
-              style={{ width: 120 }}
-              min={1}
-              value={maxCapacity}
-              onChange={value => setMaxCapacity(value)}
-            />
-            <Button 
-              type="primary" 
-              icon={<Search size={16} />}
-              onClick={fetchCourses}
-            >
-              Search
-            </Button>
-            <Button 
-              type="default" 
-              icon={<Filter size={16} />}
-              onClick={() => {
-                setSearchText('');
-                setDepartmentFilter('');
-                setCreditsFilter(null);
-                setSemesterFilter('');
-                setMinCapacity(null);
-                setMaxCapacity(null);
-                fetchCourses();
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
-        <Card>
-          <Table 
-            dataSource={courses} 
-            columns={columns} 
-            rowKey="id"
-            loading={loading}
-            pagination={{ pageSize: 5 }}
-            locale={{ emptyText: "No courses match your search criteria" }}
-          />
-        </Card>
-      </div>
-      
-      {/* Enrollment Confirmation Modal */}
-      <Modal
-        title="Confirm Enrollment"
-        open={confirmModalVisible}
-        onOk={handleConfirmEnroll}
-        onCancel={() => setConfirmModalVisible(false)}
-        okText="Enroll"
-        cancelText="Cancel"
-      >
-        <div className="py-4">
-          <AlertCircle size={40} className="text-primary mx-auto mb-4" />
-          <p className="text-center mb-4">Are you sure you want to enroll in this course?</p>
-          
-          {selectedCourse && (
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-bold">{selectedCourse.course_code}</span>
-                <Badge count={selectedCourse.credits} style={{ backgroundColor: '#52c41a' }} />
-              </div>
-              <p className="font-semibold mb-2">{selectedCourse.title}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{selectedCourse.description}</p>
-              <div className="flex justify-between items-center">
-                <Tag color="blue">{selectedCourse.department}</Tag>
-                <span className="text-sm">Prerequisites: {selectedCourse.prerequisites || 'None'}</span>
-              </div>
-            </div>
-          )}
-          
-          <Divider />
-          
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <p>
-              <InfoIcon size={16} className="inline mr-1" />
-              This will add the course to your schedule for the current semester.
-            </p>
-            <p className="mt-2">
-              <InfoIcon size={16} className="inline mr-1" />
-              You can drop the course within the first two weeks without penalty.
-            </p>
-          </div>
-        </div>
-      </Modal>
-      
       {/* Course Details Modal */}
       <Modal
         title="Course Details"
@@ -518,19 +224,7 @@ const CourseRegistration: React.FC = () => {
         footer={[
           <Button key="close" onClick={() => setCourseDetailsVisible(false)}>
             Close
-          </Button>,
-          courseDetail && !isEnrolled(courseDetail.id) && (
-            <Button 
-              key="enroll" 
-              type="primary"
-              onClick={() => {
-                setCourseDetailsVisible(false);
-                handleEnrollClick(courseDetail);
-              }}
-            >
-              Enroll Now
-            </Button>
-          )
+          </Button>
         ]}
         width={600}
       >
@@ -564,48 +258,11 @@ const CourseRegistration: React.FC = () => {
                 <p>{courseDetail.capacity} students</p>
               </div>
             </div>
-            
-            <Divider />
-            
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mt-4">
-              <h5 className="font-semibold mb-2">Registration Status</h5>
-              {isEnrolled(courseDetail.id) ? (
-                <div className="flex items-center text-green-600">
-                  <CheckCircle size={20} className="mr-2" />
-                  <span>You are currently enrolled in this course</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-blue-600">
-                  <Info size={20} className="mr-2" />
-                  <span>You are not enrolled in this course</span>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </Modal>
     </div>
   );
 };
-
-// Info Icon component for the modal
-const InfoIcon = (props: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 16v-4" />
-    <path d="M12 8h.01" />
-  </svg>
-);
 
 export default CourseRegistration; 
