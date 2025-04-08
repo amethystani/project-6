@@ -52,14 +52,7 @@ def setup_password():
     )
     
     if result["success"]:
-        # Generate access token
-        access_token = create_access_token(identity=result["user"]["id"])
-        return jsonify({
-            "success": True,
-            "message": "Password set successfully",
-            "user": result["user"],
-            "access_token": access_token
-        }), 200
+        return jsonify(result), 200
     else:
         return jsonify(result), 400
 
@@ -72,16 +65,18 @@ def register():
     required_fields = ['email', 'password', 'first_name', 'last_name', 'role']
     for field in required_fields:
         if field not in data:
-            return jsonify({"success": False, "message": f"Missing required field: {field}"}), 400
+            return jsonify({
+                "success": False,
+                "message": f"{field} is required"
+            }), 400
     
     # Validate role
     try:
         role = UserRole(data['role'])
     except ValueError:
-        valid_roles = [role.value for role in UserRole]
         return jsonify({
-            "success": False, 
-            "message": f"Invalid role. Must be one of: {', '.join(valid_roles)}"
+            "success": False,
+            "message": "Invalid role"
         }), 400
     
     # Register the user
@@ -94,14 +89,7 @@ def register():
     )
     
     if result["success"]:
-        # Generate access token
-        access_token = create_access_token(identity=result["user"]["id"])
-        return jsonify({
-            "success": True,
-            "message": "User registered successfully",
-            "user": result["user"],
-            "access_token": access_token
-        }), 201
+        return jsonify(result), 201
     else:
         return jsonify(result), 400
 
@@ -124,29 +112,22 @@ def login():
     )
     
     if result["success"]:
-        # Generate access token
-        access_token = create_access_token(identity=result["user"]["id"])
-        return jsonify({
-            "success": True,
-            "message": "Login successful",
-            "user": result["user"],
-            "access_token": access_token
-        }), 200
+        return jsonify(result), 200
     else:
         return jsonify(result), 401
 
 @auth_bp.route('/verify-token', methods=['GET'])
 @jwt_required()
 def verify_token():
-    """Verify a JWT token and return the user"""
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    """Verify a JWT token"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     
     if not user:
         return jsonify({
             "success": False,
-            "message": "Invalid token"
-        }), 401
+            "message": "User not found"
+        }), 404
     
     return jsonify({
         "success": True,

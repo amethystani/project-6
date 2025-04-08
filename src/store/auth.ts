@@ -82,7 +82,7 @@ export const useAuthStore = create<AuthState>()(
         lastVerified = now;
         
         try {
-          const response = await fetch('http://localhost:5001/auth/verify-token', {
+          const response = await fetch('http://localhost:5001/api/auth/verify-token', {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`

@@ -57,7 +57,7 @@ const AvailableCourses: React.FC = () => {
       if (maxCapacity) params.append('max_capacity', maxCapacity.toString());
       params.append('is_active', 'true');
       
-      const response = await axios.get(`${apiUrl}/api/courses?${params.toString()}`, {
+      const response = await axios.get(`${apiUrl}/api/courses/?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

@@ -6,6 +6,15 @@ export interface User {
   role: UserRole;
   name: string;
   avatar_url?: string;
+  phone?: string;
+  address?: string;
+  department?: string;
+  studentId?: string;
+  enrollmentYear?: string;
+  major?: string;
+  gpa?: string;
+  creditsCompleted?: string;
+  profilePicture?: string;
 }
 
 export interface Course {

@@ -95,7 +95,7 @@ const ApprovalsManagement: React.FC = () => {
 
       // Use a hardcoded API URL if the environment variable isn't available
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const endpoint = `${apiUrl}/api/courses`;
+      const endpoint = `${apiUrl}/api/courses/`;
       
       console.log('Submitting to endpoint:', endpoint);
       

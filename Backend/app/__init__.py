@@ -13,16 +13,6 @@ def create_app():
     app.config.from_object(Config)
     
     # Configure CORS
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-    
-    # Configure CORS
-    CORS(app, 
-         resources={r"/*": {"origins": "*"}}, 
-         supports_credentials=True,
-         methods=["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With"])
-    
-    # Configure CORS
     CORS(app, 
          resources={r"/*": {"origins": "*"}}, 
          supports_credentials=True,

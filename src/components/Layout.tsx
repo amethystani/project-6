@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { cn } from '../lib/utils';
+import NotificationsSidebar from './NotificationsSidebar';
 
 interface NavItem {
   name: string;
@@ -51,36 +52,11 @@ interface Enrollment {
 }
 
 const StudentNavigation = () => {
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { token } = useAuth();
   const location = useLocation();
-
-  const fetchEnrollments = async () => {
-    setLoading(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const response = await axios.get(`${apiUrl}/api/enrollments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.status === 'success') {
-        setEnrollments(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching enrollments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEnrollments();
-  }, []);
 
   const mainNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Course Registration', href: '/dashboard/course-registration', icon: BookOpen },
+    { name: 'My Courses', href: '/dashboard/course-registration', icon: BookOpen },
     { name: 'Available Courses', href: '/dashboard/available-courses', icon: BookOpen },
     { name: 'Assignments', href: '/dashboard/assignment-management', icon: FileText },
     { name: 'Academic Records', href: '/dashboard/academic-records', icon: GraduationCap },
@@ -97,16 +73,16 @@ const StudentNavigation = () => {
             key={item.name}
             to={item.href}
             className={cn(
-              "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200",
+              "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
               isActive
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-primary/10"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
             )}
           >
             <item.icon
               className={cn(
                 "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-                isActive ? "text-primary-foreground" : "text-primary"
+                isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
               )}
               aria-hidden="true"
             />
@@ -114,58 +90,19 @@ const StudentNavigation = () => {
           </Link>
         );
       })}
-
-      {/* Enrolled Courses Section */}
-      <div className="mt-8">
-        <h3 className="px-3 text-sm font-medium text-muted-foreground mb-2">
-          Enrolled Courses
-        </h3>
-        {loading ? (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-          </div>
-        ) : enrollments.length > 0 ? (
-          <div className="space-y-1">
-            {enrollments.map((enrollment) => (
-              <Link
-                key={enrollment.id}
-                to={`/course/${enrollment.course.id}`}
-                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md hover:bg-primary/10"
-              >
-                <Book
-                  className="mr-3 h-4 w-4 text-primary transition-transform duration-200 group-hover:scale-110"
-                  aria-hidden="true"
-                />
-                <div className="flex-1 truncate">
-                  <span className="block truncate">{enrollment.course.course_code}</span>
-                  <span className="block text-xs text-muted-foreground truncate">
-                    {enrollment.course.title}
-                  </span>
-                </div>
-                <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  {enrollment.course.credits} cr
-                </span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="px-3 py-2 text-sm text-muted-foreground">
-            No enrolled courses
-          </div>
-        )}
-      </div>
     </nav>
   );
 };
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -199,30 +136,111 @@ export default function Layout() {
   };
 
   // Navigation items for different roles
-  const getDepartmentHeadNav = () => [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Department Analytics', href: '/department-analytics', icon: BarChart3 },
-    { name: 'Approvals & Policy', href: '/approvals-management', icon: ClipboardCheck },
-    { name: 'Reports & Strategy', href: '/reporting-strategy', icon: FileBarChart },
-  ];
+  const getDepartmentHeadNav = () => (
+    <nav className="px-2 space-y-1">
+      {[
+        { name: 'Dashboard', href: '/', icon: Home },
+        { name: 'Department Analytics', href: '/department-analytics', icon: BarChart3 },
+        { name: 'Approvals & Policy', href: '/approvals-management', icon: ClipboardCheck },
+        { name: 'Reports & Strategy', href: '/reporting-strategy', icon: FileBarChart },
+      ].map((item) => {
+        const isActive = location.pathname === item.href;
+        return (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+              isActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+            )}
+          >
+            <item.icon
+              className={cn(
+                "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+              )}
+              aria-hidden="true"
+            />
+            {item.name}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   // Faculty specific navigation
-  const getFacultyNav = () => [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Course Management', href: '/course-management', icon: BookOpen },
-    { name: 'Grade Entry', href: '/grade-entry', icon: FileSpreadsheet },
-    { name: 'Faculty Analytics', href: '/faculty-analytics', icon: BarChart3 },
-    { name: 'Schedule', href: '/schedule', icon: Calendar },
-  ];
+  const getFacultyNav = () => (
+    <nav className="px-2 space-y-1">
+      {[
+        { name: 'Dashboard', href: '/', icon: Home },
+        { name: 'Course Management', href: '/course-management', icon: BookOpen },
+        { name: 'Grade Entry', href: '/grade-entry', icon: FileSpreadsheet },
+        { name: 'Faculty Analytics', href: '/faculty-analytics', icon: BarChart3 },
+        { name: 'Schedule', href: '/schedule', icon: Calendar },
+      ].map((item) => {
+        const isActive = location.pathname === item.href;
+        return (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+              isActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+            )}
+          >
+            <item.icon
+              className={cn(
+                "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+              )}
+              aria-hidden="true"
+            />
+            {item.name}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   // Admin specific navigation
-  const getAdminNav = () => [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Course Approvals', href: '/resource-allocation', icon: ClipboardCheck },
-    { name: 'User Management', href: '/user-management', icon: Users },
-    { name: 'Audit Logs', href: '/audit-logs', icon: Activity },
-    { name: 'System Settings', href: '/system-settings', icon: Settings },
-  ];
+  const getAdminNav = () => (
+    <nav className="px-2 space-y-1">
+      {[
+        { name: 'Dashboard', href: '/', icon: Home },
+        { name: 'Course Approvals', href: '/resource-allocation', icon: ClipboardCheck },
+        { name: 'User Management', href: '/user-management', icon: Users },
+        { name: 'Audit Logs', href: '/audit-logs', icon: Activity },
+        { name: 'System Settings', href: '/system-settings', icon: Settings },
+      ].map((item) => {
+        const isActive = location.pathname === item.href;
+        return (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+              isActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+            )}
+          >
+            <item.icon
+              className={cn(
+                "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+              )}
+              aria-hidden="true"
+            />
+            {item.name}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   // Show appropriate navigation based on user role
   const navigation = 
@@ -230,7 +248,26 @@ export default function Layout() {
     user.role === 'admin' ? getAdminNav() : 
     user.role === 'faculty' ? getFacultyNav() :
     user.role === 'student' ? <StudentNavigation /> :
-    [{ name: 'Dashboard', href: '/', icon: Home }];
+    <nav className="px-2 space-y-1">
+      <Link
+        to="/"
+        className={cn(
+          "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
+          location.pathname === "/"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+        )}
+      >
+        <Home
+          className={cn(
+            "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+            location.pathname === "/" ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+          )}
+          aria-hidden="true"
+        />
+        Dashboard
+      </Link>
+    </nav>;
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -250,234 +287,107 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Mobile Navigation Header - Fixed position */}
-      <header className="sticky top-0 z-50 bg-background border-b shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={toggleMobileMenu}
-                className="md:hidden p-2 rounded-md mr-2"
-                aria-label="Toggle menu"
-              >
-                {mobileMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-lg">
-                  U
-                </div>
-                <h1 className="text-xl font-bold">UDIS</h1>
-              </div>
-              <span className="ml-4 px-3 py-1 rounded-full text-xs capitalize bg-primary/10 font-medium">
-                {user.role}
-              </span>
+    <div className="min-h-screen bg-background">
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b">
+        <div className="flex items-center justify-between p-4">
+          <button
+            onClick={toggleMobileMenu}
+            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              className="relative p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors"
+            >
+              <Bell className="h-6 w-6" />
+              {notifications.some(n => n.unread) && (
+                <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              className="flex items-center gap-2 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors"
+            >
+              <User className="h-6 w-6" />
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-background border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex-1 flex flex-col pt-16 lg:pt-0">
+            <div className="flex items-center justify-center h-16 px-4 border-b">
+              <h1 className="text-xl font-semibold">Student Portal</h1>
             </div>
-            
-            <div className="flex items-center gap-2">
-              {/* Notifications dropdown */}
-              <div className="relative">
-                <button 
-                  className="p-2 rounded-md hover:bg-primary/10 relative"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setNotificationsOpen(!notificationsOpen);
-                    setProfileMenuOpen(false);
-                  }}
-                >
-                  <Bell className="h-5 w-5" />
-                  {notifications.some(n => n.unread) && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
-                  )}
-                </button>
-                
-                {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-background rounded-md shadow-lg py-1 z-50 border border-border">
-                    <div className="p-3 border-b border-border">
-                      <h3 className="font-semibold">Notifications</h3>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.map((notification) => (
-                        <div 
-                          key={notification.id} 
-                          className={cn(
-                            "p-3 hover:bg-primary/5 cursor-pointer",
-                            notification.unread ? "bg-primary/5" : ""
-                          )}
-                        >
-                          <div className="flex justify-between">
-                            <span className="font-medium">{notification.title}</span>
-                            <span className="text-xs text-muted-foreground">{notification.time}</span>
-                          </div>
-                          <p className="text-sm mt-1">{notification.message}</p>
-                          {notification.unread && (
-                            <div className="mt-2 flex justify-end">
-                              <span className="text-xs px-2 py-1 bg-primary/10 rounded-full text-primary">New</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-2 border-t border-border">
-                      <button className="w-full p-2 text-center text-primary hover:bg-primary/5 rounded-md text-sm font-medium">
-                        View all notifications
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Theme toggle */}
+            {navigation}
+          </div>
+          <div className="p-4 border-t space-y-2">
+            <Link
+              to="/dashboard/profile"
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors"
+            >
+              <User className="h-5 w-5" />
+              Profile
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors"
+            >
+              <LogOut className="h-5 w-5" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        <main className="min-h-screen pt-16 lg:pt-0">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Notifications sidebar */}
+      {notificationsOpen && (
+        <div className="fixed inset-y-0 right-0 z-40 w-80 bg-background border-l transform transition-transform duration-200 ease-in-out lg:translate-x-0">
+          <div className="h-full pt-16 lg:pt-0">
+            <NotificationsSidebar />
+          </div>
+        </div>
+      )}
+
+      {/* Profile menu */}
+      {profileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden" onClick={handleClickOutside}>
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute right-4 top-16 w-48 bg-background rounded-md shadow-lg border">
+            <div className="py-1">
               <button
-                onClick={toggleTheme}
-                className="p-2 rounded-md hover:bg-primary/10 transition-all duration-200"
-                aria-label="Toggle theme"
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-foreground transition-colors"
               >
-                {theme === 'dark' ? (
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all duration-300" />
-                ) : (
-                  <Moon className="h-5 w-5 rotate-90 scale-100 transition-all duration-300" />
-                )}
+                <LogOut className="h-4 w-4" />
+                Logout
               </button>
-              
-              {/* User profile dropdown */}
-              <div className="relative ml-2">
-                <button 
-                  className="flex items-center gap-2 hover:bg-primary/10 px-2 py-1 rounded-md"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setProfileMenuOpen(!profileMenuOpen);
-                    setNotificationsOpen(false);
-                  }}
-                >
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <User className="h-5 w-5 text-primary" />
-                  </div>
-                  <ChevronDown className={cn(
-                    "h-4 w-4 transition-transform duration-200",
-                    profileMenuOpen ? "rotate-180" : ""
-                  )} />
-                </button>
-                
-                {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-background rounded-md shadow-lg py-1 z-50 border border-border">
-                    <div className="p-3 border-b border-border">
-                      <p className="font-semibold">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-primary/5">
-                      Your Profile
-                    </Link>
-                    <Link to="/settings" className="block px-4 py-2 text-sm hover:bg-primary/5">
-                      Settings
-                    </Link>
-                    <div className="border-t border-border my-1"></div>
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign out
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
-      </header>
-
-      <div className="flex-1 flex">
-        {/* Sidebar - Fixed position on desktop, slide-over on mobile */}
-        <aside
-          className={cn(
-            "md:w-64 bg-background fixed md:sticky top-16 h-[calc(100vh-64px)] z-40 border-r transition-transform duration-300 ease-in-out",
-            mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-          )}
-        >
-          <div className="flex flex-col h-full py-4">
-            <div className="px-4 mb-4">
-              <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="Search..." 
-                  className="w-full h-10 bg-background/50 border border-border rounded-md pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <div className="absolute right-3 top-3 text-muted-foreground">
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M10 6.5C10 8.433 8.433 10 6.5 10C4.567 10 3 8.433 3 6.5C3 4.567 4.567 3 6.5 3C8.433 3 10 4.567 10 6.5ZM9.30884 10.0159C8.53901 10.6318 7.56251 11 6.5 11C4.01472 11 2 8.98528 2 6.5C2 4.01472 4.01472 2 6.5 2C8.98528 2 11 4.01472 11 6.5C11 7.56251 10.6318 8.53901 10.0159 9.30884L12.8536 12.1464C13.0488 12.3417 13.0488 12.6583 12.8536 12.8536C12.6583 13.0488 12.3417 13.0488 12.1464 12.8536L9.30884 10.0159Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            
-            {/* Navigation */}
-            {React.isValidElement(navigation) ? (
-              navigation
-            ) : (
-              <nav className="px-2 space-y-1 flex-1 overflow-y-auto hide-scrollbar">
-                {(navigation as NavItem[]).map((item) => {
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={cn(
-                        "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-primary/10"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "mr-3 h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-                          isActive ? "text-primary-foreground" : "text-primary"
-                        )}
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </nav>
-            )}
-            
-            <div className="px-4 mt-auto">
-              <div className="rounded-md bg-primary/5 p-3">
-                <h4 className="font-medium text-sm mb-1">Need help?</h4>
-                <p className="text-xs text-muted-foreground mb-2">Contact support for assistance with any issues.</p>
-                <button className="w-full py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium flex items-center justify-center">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  Contact Support
-                </button>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Backdrop for mobile */}
-        {mobileMenuOpen && (
-          <div 
-            className="fixed inset-0 bg-black/30 z-30 md:hidden"
-            onClick={toggleMobileMenu}
-          ></div>
-        )}
-
-        {/* Main content area */}
-        <main 
-          className="flex-1 md:ml-0 pt-0 pb-12"
-          onClick={handleClickOutside}
-        >
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      )}
     </div>
   );
 }

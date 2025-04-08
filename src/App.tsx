@@ -16,6 +16,7 @@ import AssignmentManagement from './pages/student/AssignmentManagement';
 import AcademicRecords from './pages/student/AcademicRecords';
 import Schedule from './pages/student/Schedule';
 import AvailableCourses from './pages/student/AvailableCourses';
+import Profile from './pages/Profile';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -142,6 +143,8 @@ function App() {
               <Route path="assignment-management" element={<AssignmentManagement />} />
               <Route path="academic-records" element={<AcademicRecords />} />
               <Route path="schedule" element={<Schedule />} />
+              {/* Profile route */}
+              <Route path="profile" element={<Profile />} />
             </Route>
             
             {/* Redirect for authenticated users */}

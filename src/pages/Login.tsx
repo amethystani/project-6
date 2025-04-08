@@ -42,7 +42,7 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/auth/check-user', {
+      const response = await fetch('http://localhost:5001/api/auth/check-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/auth/setup-password', {
+      const response = await fetch('http://localhost:5001/api/auth/setup-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function Login() {
 
     try {
       // Make API call to the backend login endpoint
-      const response = await fetch('http://localhost:5001/auth/login', {
+      const response = await fetch('http://localhost:5001/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export default function Login() {
     const backendRole = mapRoleToBackend(selectedRole);
 
     try {
-      const response = await fetch('http://localhost:5001/auth/register', {
+      const response = await fetch('http://localhost:5001/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
