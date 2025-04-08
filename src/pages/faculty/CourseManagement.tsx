@@ -70,7 +70,7 @@ const CourseManagement = () => {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
       // Fetch course requests made by this faculty
-      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
+      const response = await axios.get(`${apiUrl}/api/courses/approvals`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

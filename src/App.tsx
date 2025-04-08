@@ -17,6 +17,9 @@ import AcademicRecords from './pages/student/AcademicRecords';
 import Schedule from './pages/student/Schedule';
 import AvailableCourses from './pages/student/AvailableCourses';
 import Profile from './pages/Profile';
+import DepartmentAnalytics from './pages/head/DepartmentAnalytics';
+import ReportingStrategy from './pages/head/ReportingStrategy';
+import ApprovalsPolicy from './pages/head/ApprovalsPolicy';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -125,9 +128,10 @@ function App() {
             }>
               <Route index element={<Dashboard />} />
               {/* Department Head routes */}
-              <Route path="department-analytics" element={<PlaceholderPage />} />
+              <Route path="department-analytics" element={<DepartmentAnalytics />} />
               <Route path="approvals-management" element={<ApprovalsManagement />} />
-              <Route path="reporting-strategy" element={<PlaceholderPage />} />
+              <Route path="approvals-policy" element={<ApprovalsPolicy />} />
+              <Route path="reporting-strategy" element={<ReportingStrategy />} />
               {/* Admin Staff routes */}
               <Route path="user-management" element={<PlaceholderPage />} />
               <Route path="audit-logs" element={<PlaceholderPage />} />

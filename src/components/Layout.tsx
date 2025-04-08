@@ -139,10 +139,11 @@ export default function Layout() {
   const getDepartmentHeadNav = () => (
     <nav className="px-2 space-y-1">
       {[
-        { name: 'Dashboard', href: '/', icon: Home },
-        { name: 'Department Analytics', href: '/department-analytics', icon: BarChart3 },
-        { name: 'Approvals & Policy', href: '/approvals-management', icon: ClipboardCheck },
-        { name: 'Reports & Strategy', href: '/reporting-strategy', icon: FileBarChart },
+        { name: 'Dashboard', href: '/dashboard', icon: Home },
+        { name: 'Department Analytics', href: '/dashboard/department-analytics', icon: BarChart3 },
+        { name: 'Approvals Management', href: '/dashboard/approvals-management', icon: ClipboardCheck },
+        { name: 'Approvals & Policy', href: '/dashboard/approvals-policy', icon: FileText },
+        { name: 'Reports & Strategy', href: '/dashboard/reporting-strategy', icon: FileBarChart },
       ].map((item) => {
         const isActive = location.pathname === item.href;
         return (
@@ -332,7 +333,17 @@ export default function Layout() {
         <div className="flex flex-col h-full">
           <div className="flex-1 flex flex-col pt-16 lg:pt-0">
             <div className="flex items-center justify-center h-16 px-4 border-b">
-              <h1 className="text-xl font-semibold">Student Portal</h1>
+              <h1 className="text-xl font-semibold">
+                {user.role === 'student' 
+                  ? 'Student Portal' 
+                  : user.role === 'faculty' 
+                  ? 'Faculty Portal' 
+                  : user.role === 'admin' 
+                  ? 'Admin Portal' 
+                  : user.role === 'head' 
+                  ? 'Department Head Portal' 
+                  : 'User Portal'}
+              </h1>
             </div>
             {navigation}
           </div>

@@ -14,7 +14,8 @@ import {
   Camera,
   Edit2,
   Save,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -44,7 +45,10 @@ const Profile = () => {
 
   const sections: ProfileSection[] = [
     { id: 'personal', title: 'Personal Information', icon: User },
-    { id: 'academic', title: 'Academic Details', icon: GraduationCap },
+    ...(user?.role === 'student' ? [{ id: 'academic', title: 'Academic Details', icon: GraduationCap }] : []),
+    ...(user?.role === 'faculty' ? [{ id: 'courses', title: 'Course Details', icon: BookOpen }] : []),
+    ...(user?.role === 'head' ? [{ id: 'department', title: 'Department Details', icon: Users }] : []),
+    ...(user?.role === 'admin' ? [{ id: 'admin', title: 'Administrative Details', icon: Shield }] : []),
     { id: 'security', title: 'Security Settings', icon: Shield },
     { id: 'preferences', title: 'Preferences', icon: Settings },
   ];
@@ -154,56 +158,92 @@ const Profile = () => {
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-primary" />
-            <div className="flex-1">
-              <label className="text-sm text-muted-foreground">Enrollment Year</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.enrollmentYear}
-                  onChange={(e) => setProfileData({ ...profileData, enrollmentYear: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
-                />
-              ) : (
-                <p className="font-medium">{profileData.enrollmentYear}</p>
-              )}
-            </div>
-          </div>
+          {/* Only show student-specific fields for students */}
+          {user?.role === 'student' && (
+            <>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <label className="text-sm text-muted-foreground">Enrollment Year</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={profileData.enrollmentYear}
+                      onChange={(e) => setProfileData({ ...profileData, enrollmentYear: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
+                    />
+                  ) : (
+                    <p className="font-medium">{profileData.enrollmentYear}</p>
+                  )}
+                </div>
+              </div>
 
-          <div className="flex items-center gap-3">
-            <BookOpen className="w-5 h-5 text-primary" />
-            <div className="flex-1">
-              <label className="text-sm text-muted-foreground">Major</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.major}
-                  onChange={(e) => setProfileData({ ...profileData, major: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
-                />
-              ) : (
-                <p className="font-medium">{profileData.major}</p>
-              )}
-            </div>
-          </div>
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <label className="text-sm text-muted-foreground">Major</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={profileData.major}
+                      onChange={(e) => setProfileData({ ...profileData, major: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
+                    />
+                  ) : (
+                    <p className="font-medium">{profileData.major}</p>
+                  )}
+                </div>
+              </div>
 
-          <div className="flex items-center gap-3">
-            <Award className="w-5 h-5 text-primary" />
-            <div className="flex-1">
-              <label className="text-sm text-muted-foreground">GPA</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.gpa}
-                  onChange={(e) => setProfileData({ ...profileData, gpa: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
-                />
-              ) : (
-                <p className="font-medium">{profileData.gpa}</p>
-              )}
+              <div className="flex items-center gap-3">
+                <Award className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <label className="text-sm text-muted-foreground">GPA</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={profileData.gpa}
+                      onChange={(e) => setProfileData({ ...profileData, gpa: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
+                    />
+                  ) : (
+                    <p className="font-medium">{profileData.gpa}</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Show department information for faculty and department heads */}
+          {(user?.role === 'faculty' || user?.role === 'head') && (
+            <div className="flex items-center gap-3">
+              <Users className="w-5 h-5 text-primary" />
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground">Department</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.department}
+                    onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
+                  />
+                ) : (
+                  <p className="font-medium">{profileData.department || 'Not assigned'}</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Show role for admins */}
+          {user?.role === 'admin' && (
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-primary" />
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground">Role</label>
+                <p className="font-medium">System Administrator</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -310,7 +350,17 @@ const Profile = () => {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Profile</h1>
+        <h1 className="text-3xl font-bold">
+          {user?.role === 'student' 
+            ? 'Student Profile' 
+            : user?.role === 'faculty' 
+            ? 'Faculty Profile' 
+            : user?.role === 'admin' 
+            ? 'Administrator Profile' 
+            : user?.role === 'head' 
+            ? 'Department Head Profile' 
+            : 'User Profile'}
+        </h1>
         {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
@@ -362,7 +412,71 @@ const Profile = () => {
         {/* Content */}
         <div className="md:col-span-3">
           {activeSection === 'personal' && renderPersonalInfo()}
-          {activeSection === 'academic' && renderAcademicInfo()}
+          {activeSection === 'academic' && user?.role === 'student' && renderAcademicInfo()}
+          {activeSection === 'courses' && user?.role === 'faculty' && (
+            <div className="space-y-6">
+              <div className="p-6 rounded-lg border bg-card">
+                <h3 className="text-lg font-semibold mb-4">Teaching Courses</h3>
+                <p className="text-muted-foreground mb-4">Courses you are currently teaching:</p>
+                <div className="space-y-2">
+                  <div className="p-3 border rounded-md">
+                    <p className="font-medium">CS101: Introduction to Programming</p>
+                    <p className="text-sm text-muted-foreground">35 enrolled students</p>
+                  </div>
+                  <div className="p-3 border rounded-md">
+                    <p className="font-medium">CS305: Data Structures and Algorithms</p>
+                    <p className="text-sm text-muted-foreground">42 enrolled students</p>
+                  </div>
+                  <div className="p-3 border rounded-md">
+                    <p className="font-medium">CS401: Advanced Database Systems</p>
+                    <p className="text-sm text-muted-foreground">28 enrolled students</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {activeSection === 'department' && user?.role === 'head' && (
+            <div className="space-y-6">
+              <div className="p-6 rounded-lg border bg-card">
+                <h3 className="text-lg font-semibold mb-4">Department Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Department Name</p>
+                    <p className="text-xl font-semibold">{profileData.department || 'Computer Science'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Faculty Members</p>
+                    <p className="text-xl font-semibold">35</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active Courses</p>
+                    <p className="text-xl font-semibold">48</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {activeSection === 'admin' && user?.role === 'admin' && (
+            <div className="space-y-6">
+              <div className="p-6 rounded-lg border bg-card">
+                <h3 className="text-lg font-semibold mb-4">Administrator Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Admin ID</p>
+                    <p className="text-xl font-semibold">ADMIN-{user?.id || '001'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Access Level</p>
+                    <p className="text-xl font-semibold">Full System Access</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Last Login</p>
+                    <p className="text-xl font-semibold">{new Date().toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {activeSection === 'security' && renderSecuritySettings()}
           {activeSection === 'preferences' && renderPreferences()}
         </div>

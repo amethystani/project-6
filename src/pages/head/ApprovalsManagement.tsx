@@ -50,18 +50,22 @@ const ApprovalsManagement: React.FC = () => {
       // Use a hardcoded API URL if the environment variable isn't available
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
-      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      console.log('Fetching course approvals from:', `${apiUrl}/api/department-head/course-approvals`);
+      
+      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`);
+      
+      console.log('Received response:', response);
       
       if (response.data.status === 'success') {
         setCourseApprovals(response.data.data);
+        message.success('Course approvals loaded successfully');
       } else {
-        message.error('Failed to fetch course approvals');
+        console.error('Failed response:', response.data);
+        message.error('Failed to fetch course approvals: ' + (response.data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error fetching course approvals:', error);
-      message.error('Failed to fetch course approvals');
+      message.error('Failed to fetch course approvals. Please try again later.');
     } finally {
       setLoading(false);
     }

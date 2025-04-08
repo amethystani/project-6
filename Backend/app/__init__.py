@@ -54,6 +54,7 @@ def create_app():
     from app.routes.enrollments import enrollments_bp
     from app.routes.assignments import assignments_bp
     from app.routes.notifications import notifications_bp
+    from app.routes.department_head import department_head_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
@@ -61,6 +62,7 @@ def create_app():
     app.register_blueprint(enrollments_bp, url_prefix='/api/enrollments')
     app.register_blueprint(assignments_bp, url_prefix='/api/assignments')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+    app.register_blueprint(department_head_bp, url_prefix='/api/department-head')
     
     # Create database tables
     with app.app_context():

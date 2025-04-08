@@ -27,7 +27,9 @@ import {
   Clock,
   Star,
   CheckCircle,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ChartsComponent from '../components/ChartsComponent';
@@ -480,6 +482,26 @@ const departmentHeadCourseRequests = [
 ];
 
 // Define interfaces for course request types
+interface CourseApproval {
+  id: number;
+  course: {
+    course_code: string;
+    title: string;
+    department: string;
+  };
+  requested_by: string | number;
+  requested_at: string;
+  status: string;
+}
+
+interface CalendarEvent {
+  id: number;
+  date: Date;
+  title: string;
+  type: string;
+  day: number;
+}
+
 interface CourseRequest {
   id: number;
   courseCode: string;
@@ -490,48 +512,230 @@ interface CourseRequest {
 
 export default function Dashboard() {
   const { user } = useAuthStore();
-  const { token } = useAuth();
-  const location = useLocation();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [departmentCourseRequests, setDepartmentCourseRequests] = useState<CourseRequest[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
-  const [adminPendingApprovals, setAdminPendingApprovals] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [adminPendingApprovals, setAdminPendingApprovals] = useState<CourseRequest[]>([]);
   const [loadingAdminApprovals, setLoadingAdminApprovals] = useState(false);
+  const location = useLocation();
+  const { token } = useAuth();
+  // New states for real-time data
+  const [departmentAnalytics, setDepartmentAnalytics] = useState<Record<string, number>>({});
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [busyDays, setBusyDays] = useState<number[]>([]);
   
   // Get current stats based on user role
   const stats = roleSpecificStats[user?.role as keyof typeof roleSpecificStats] || roleSpecificStats.guest;
   
-  // Fetch real department head course requests every time the component mounts
+  // Fetch real data when component mounts
   useEffect(() => {
-    // Always fetch data when component mounts, regardless of role
     if (user?.role === 'head') {
       fetchDepartmentHeadCourseRequests();
+      fetchDepartmentAnalytics();
+      generateCalendarEvents();
     }
     if (user?.role === 'admin') {
       fetchAdminPendingApprovals();
+      generateCalendarEvents();
+    }
+    if (user?.role === 'faculty' || user?.role === 'student') {
+      generateCalendarEvents();
     }
   }, [user]);
 
-  // Add an additional effect to refresh data when this component becomes visible
-  useEffect(() => {
-    // Only refresh if we're at the dashboard (current page)
-    if (location.pathname === '/dashboard' || location.pathname === '/') {
-      console.log("Dashboard is visible, refreshing data...");
-      if (user?.role === 'head') {
-        fetchDepartmentHeadCourseRequests();
-      }
-      if (user?.role === 'admin') {
-        fetchAdminPendingApprovals();
-      }
+  // Add the generateCalendarEvents function that creates role-specific events
+  const generateCalendarEvents = () => {
+    const events: Array<{id: number, date: Date, title: string, type: string, day: number}> = [];
+    const today = new Date();
+    const currentMonth = selectedMonth;
+    const currentYear = selectedYear;
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    // Reset busy days
+    const newBusyDays: Record<string, number> = {};
+    
+    // Generate events based on user role
+    if (user?.role === 'admin') {
+      // Admin events - focused on approvals and administrative tasks
+      events.push({ 
+        id: 1, 
+        date: new Date(currentYear, currentMonth, Math.min(5, daysInMonth)), 
+        title: 'Faculty Meeting', 
+        type: 'meeting',
+        day: Math.min(5, daysInMonth)
+      });
+      events.push({ 
+        id: 2, 
+        date: new Date(currentYear, currentMonth, Math.min(10, daysInMonth)), 
+        title: 'Budget Review', 
+        type: 'deadline',
+        day: Math.min(10, daysInMonth)
+      });
+      events.push({ 
+        id: 3, 
+        date: new Date(currentYear, currentMonth, Math.min(15, daysInMonth)), 
+        title: 'Course Approval Deadline', 
+        type: 'deadline',
+        day: Math.min(15, daysInMonth)
+      });
+      events.push({ 
+        id: 4, 
+        date: new Date(currentYear, currentMonth, Math.min(20, daysInMonth)), 
+        title: 'Department Heads Meeting', 
+        type: 'meeting',
+        day: Math.min(20, daysInMonth)
+      });
+    } else if (user?.role === 'faculty') {
+      // Faculty events - focused on teaching and research
+      events.push({ 
+        id: 1, 
+        date: new Date(currentYear, currentMonth, Math.min(3, daysInMonth)), 
+        title: 'Office Hours', 
+        type: 'meeting',
+        day: Math.min(3, daysInMonth)
+      });
+      events.push({ 
+        id: 2, 
+        date: new Date(currentYear, currentMonth, Math.min(10, daysInMonth)), 
+        title: 'Research Presentation', 
+        type: 'presentation',
+        day: Math.min(10, daysInMonth)
+      });
+      events.push({ 
+        id: 3, 
+        date: new Date(currentYear, currentMonth, Math.min(15, daysInMonth)), 
+        title: 'Midterm Exam', 
+        type: 'exam',
+        day: Math.min(15, daysInMonth)
+      });
+      events.push({ 
+        id: 4, 
+        date: new Date(currentYear, currentMonth, Math.min(22, daysInMonth)), 
+        title: 'Course Materials Deadline', 
+        type: 'deadline',
+        day: Math.min(22, daysInMonth)
+      });
+    } else if (user?.role === 'head') {
+      // Department Head events - focused on departmental oversight
+      events.push({ 
+        id: 1, 
+        date: new Date(currentYear, currentMonth, Math.min(4, daysInMonth)), 
+        title: 'Faculty Performance Review', 
+        type: 'meeting',
+        day: Math.min(4, daysInMonth)
+      });
+      events.push({ 
+        id: 2, 
+        date: new Date(currentYear, currentMonth, Math.min(10, daysInMonth)), 
+        title: 'Department Budget Planning', 
+        type: 'deadline',
+        day: Math.min(10, daysInMonth)
+      });
+      events.push({ 
+        id: 3, 
+        date: new Date(currentYear, currentMonth, Math.min(15, daysInMonth)), 
+        title: 'Course Approvals Due', 
+        type: 'deadline',
+        day: Math.min(15, daysInMonth)
+      });
+      events.push({ 
+        id: 4, 
+        date: new Date(currentYear, currentMonth, Math.min(20, daysInMonth)), 
+        title: 'Academic Council Meeting', 
+        type: 'meeting',
+        day: Math.min(20, daysInMonth)
+      });
+      events.push({ 
+        id: 5, 
+        date: new Date(currentYear, currentMonth, Math.min(25, daysInMonth)), 
+        title: 'Strategic Planning Session', 
+        type: 'meeting',
+        day: Math.min(25, daysInMonth)
+      });
+    } else if (user?.role === 'student') {
+      // Student events - focused on academic deadlines
+      events.push({ 
+        id: 1, 
+        date: new Date(currentYear, currentMonth, Math.min(5, daysInMonth)), 
+        title: 'Course Registration Begins', 
+        type: 'deadline',
+        day: Math.min(5, daysInMonth)
+      });
+      events.push({ 
+        id: 2, 
+        date: new Date(currentYear, currentMonth, Math.min(12, daysInMonth)), 
+        title: 'Midterm Exams', 
+        type: 'exam',
+        day: Math.min(12, daysInMonth)
+      });
+      events.push({ 
+        id: 3, 
+        date: new Date(currentYear, currentMonth, Math.min(20, daysInMonth)), 
+        title: 'Assignment Due', 
+        type: 'deadline',
+        day: Math.min(20, daysInMonth)
+      });
+      events.push({ 
+        id: 4, 
+        date: new Date(currentYear, currentMonth, Math.min(25, daysInMonth)), 
+        title: 'Study Group Meeting', 
+        type: 'meeting',
+        day: Math.min(25, daysInMonth)
+      });
     }
-  }, [location.pathname]);
+    
+    // Add some additional random events to create busy days
+    const numRandomEvents = Math.floor(Math.random() * 5) + 3; // 3-7 random events
+    for (let i = 0; i < numRandomEvents; i++) {
+      const randomDay = Math.floor(Math.random() * daysInMonth) + 1;
+      const eventTypes = ['meeting', 'deadline', 'exam', 'presentation'] as const;
+      const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+      const titles: Record<string, string[]> = {
+        meeting: ['Committee Meeting', 'Staff Meeting', 'Advisory Meeting', 'Consultation Hours'],
+        deadline: ['Report Submission', 'Project Deadline', 'Review Deadline', 'Documentation Due'],
+        exam: ['Final Exam', 'Quiz', 'Assessment', 'Evaluation'],
+        presentation: ['Guest Lecture', 'Student Presentation', 'Workshop', 'Seminar']
+      };
+      const randomTitle = titles[randomType][Math.floor(Math.random() * titles[randomType].length)];
+      
+      events.push({
+        id: 100 + i,
+        date: new Date(currentYear, currentMonth, randomDay),
+        title: randomTitle,
+        type: randomType,
+        day: randomDay
+      });
+    }
+    
+    // Calculate busy days (days with more than one event)
+    events.forEach(event => {
+      const day = event.date.getDate().toString();
+      if (!newBusyDays[day]) {
+        newBusyDays[day] = 0;
+      }
+      newBusyDays[day]++;
+    });
+    
+    // Set days with more than one event as busy
+    const busyDaysArray: number[] = [];
+    Object.entries(newBusyDays).forEach(([day, count]) => {
+      if (count > 1) {
+        busyDaysArray.push(parseInt(day));
+      }
+    });
+    
+    setCalendarEvents(events);
+    setBusyDays(busyDaysArray);
+  };
 
-  const fetchAdminPendingApprovals = async () => {
-    setLoadingAdminApprovals(true);
+  // Fetch department analytics data
+  const fetchDepartmentAnalytics = async () => {
+    setLoadingAnalytics(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const response = await axios.get(`${apiUrl}/api/course-approvals?status=pending`, {
+      const response = await axios.get(`${apiUrl}/api/department-head/analytics`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -539,21 +743,64 @@ export default function Dashboard() {
       });
       
       if (response.data.status === 'success') {
-        const formattedApprovals = response.data.data.map((approval: any) => ({
-          id: approval.id,
-          courseCode: approval.course.course_code,
-          title: approval.course.title,
-          department: approval.course.department,
-          requestedBy: `User ID: ${approval.requested_by}`,
-          requestedAt: new Date(approval.requested_at).toLocaleDateString()
-        }));
-        setAdminPendingApprovals(formattedApprovals);
+        setDepartmentAnalytics(response.data.data);
+        
+        // Update stats with real data
+        const newStats = [...stats];
+        if (response.data.data.faculty_statistics && response.data.data.faculty_statistics.total_faculty !== undefined) {
+          newStats[1] = { 
+            ...newStats[1], 
+            value: response.data.data.faculty_statistics.total_faculty.toString() 
+          };
+        }
+        
+        if (response.data.data.enrollment_statistics && response.data.data.enrollment_statistics.total_enrollments !== undefined) {
+          newStats[0] = { 
+            ...newStats[0], 
+            value: response.data.data.enrollment_statistics.total_enrollments.toString() 
+          };
+        }
+        
+        if (response.data.data.course_statistics && response.data.data.course_statistics.active_courses !== undefined) {
+          const activePercent = response.data.data.course_statistics.active_courses / 
+                              (response.data.data.course_statistics.total_courses || 1) * 100;
+          newStats[2] = { 
+            ...newStats[2], 
+            value: `${Math.round(activePercent)}%`
+          };
+        }
       } else {
-        console.error('Failed to fetch admin pending approvals');
+        console.error('Failed to fetch department analytics');
       }
     } catch (error) {
-      console.error('Error fetching admin pending approvals:', error);
+      console.error('Error fetching department analytics:', error);
     } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  const fetchAdminPendingApprovals = async () => {
+    setLoadingAdminApprovals(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const response = await axios.get(`${apiUrl}/api/approvals/pending`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      const formattedApprovals = response.data.data.map((approval: CourseApproval) => ({
+        id: approval.id,
+        courseCode: approval.course.course_code,
+        title: approval.course.title,
+        status: approval.status,
+        requestedAt: approval.requested_at
+      }));
+      
+      setAdminPendingApprovals(formattedApprovals);
+      setLoadingAdminApprovals(false);
+    } catch (error) {
+      console.error("Error fetching admin pending approvals:", error);
       setLoadingAdminApprovals(false);
     }
   };
@@ -562,28 +809,24 @@ export default function Dashboard() {
     setLoadingRequests(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await axios.get(`${apiUrl}/api/department/course-requests`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
       });
       
-      if (response.data.status === 'success') {
-        const formattedRequests: CourseRequest[] = response.data.data.map((approval: any) => ({
-          id: approval.id,
-          courseCode: approval.course.course_code,
-          title: approval.course.title, 
-          status: approval.status,
-          requestedAt: new Date(approval.requested_at).toLocaleDateString()
-        }));
-        setDepartmentCourseRequests(formattedRequests);
-      } else {
-        console.error('Failed to fetch course approvals');
-      }
+      const formattedRequests: CourseRequest[] = response.data.data.map((approval: CourseApproval) => ({
+        id: approval.id,
+        courseCode: approval.course.course_code,
+        title: approval.course.title,
+        status: approval.status,
+        requestedAt: approval.requested_at
+      }));
+      
+      setDepartmentCourseRequests(formattedRequests);
+      setLoadingRequests(false);
     } catch (error) {
-      console.error('Error fetching department head course approvals:', error);
-    } finally {
+      console.error("Error fetching department course requests:", error);
       setLoadingRequests(false);
     }
   };
@@ -628,6 +871,29 @@ export default function Dashboard() {
     { id: 2, title: 'New Course Available', message: 'A new course has been added to your curriculum', time: '1 day ago', read: true },
     { id: 3, title: 'Upcoming Event', message: 'Department seminar scheduled for next week', time: '2 days ago', read: true },
   ];
+
+  // Add the prevMonth and nextMonth functions to the Dashboard component
+  const nextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+    // Re-generate calendar events for the new month
+    generateCalendarEvents();
+  };
+
+  const prevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+    // Re-generate calendar events for the new month
+    generateCalendarEvents();
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -871,98 +1137,102 @@ export default function Dashboard() {
             <Calendar className="h-5 w-5 mr-2 text-primary" />
             Calendar
           </h2>
-          <div className="flex justify-between items-center mb-4">
-            <button 
-              className="btn-icon"
-              onClick={() => {
-                if (selectedMonth === 0) {
-                  setSelectedMonth(11);
-                  setSelectedYear(selectedYear - 1);
-                } else {
-                  setSelectedMonth(selectedMonth - 1);
-                }
-              }}
-            >
-              &lt;
-            </button>
-            <h3 className="text-lg font-medium">
-              {new Date(selectedYear, selectedMonth).toLocaleString('default', { month: 'long' })} {selectedYear}
-            </h3>
-            <button 
-              className="btn-icon"
-              onClick={() => {
-                if (selectedMonth === 11) {
-                  setSelectedMonth(0);
-                  setSelectedYear(selectedYear + 1);
-                } else {
-                  setSelectedMonth(selectedMonth + 1);
-                }
-              }}
-            >
-              &gt;
-            </button>
-          </div>
-          
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center p-2 font-medium">
-                {day}
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">
+                  {new Date(selectedYear, selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </h3>
+                <div className="flex space-x-1">
+                  <button onClick={prevMonth} className="p-1 hover:bg-primary/10 rounded">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button onClick={nextMonth} className="p-1 hover:bg-primary/10 rounded">
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-            ))}
-            
-            {/* Empty cells for days before the 1st of the month */}
-            {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-              <div key={`empty-${i}`} className="text-center p-2"></div>
-            ))}
-            
-            {/* Calendar days */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const today = new Date();
-              const isToday = day === today.getDate() && 
-                              selectedMonth === today.getMonth() && 
-                              selectedYear === today.getFullYear();
-              
-              const dayEvents = events.filter(event => event.day === day);
-              
-              return (
-                <div 
-                  key={`day-${day}`} 
-                  className={cn(
-                    "text-center p-2 rounded-md relative cursor-pointer hover:bg-primary/10 transition-colors",
-                    isToday ? "bg-primary/20 font-bold" : ""
-                  )}
-                >
-                  {day}
-                  {dayEvents.length > 0 && (
-                    <div className="absolute bottom-1 right-1">
-                      <div className="h-2 w-2 bg-primary rounded-full"></div>
+              <div className="grid grid-cols-7 text-center text-xs leading-6 text-muted-foreground">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+              </div>
+              <div className="mt-2 grid grid-cols-7 text-sm">
+                {[...Array(firstDayOfMonth).keys()].map((_, i) => (
+                  <div key={`empty-${i}`} className="py-2" />
+                ))}
+                {[...Array(daysInMonth).keys()].map((_, i) => {
+                  const day = i + 1;
+                  const date = new Date(selectedYear, selectedMonth, day);
+                  const isToday = 
+                    date.getDate() === new Date().getDate() &&
+                    date.getMonth() === new Date().getMonth() &&
+                    date.getFullYear() === new Date().getFullYear();
+                  
+                  const dayEvents = calendarEvents.filter(event => event.day === day);
+                  const hasEvents = dayEvents.length > 0;
+                  const isBusy = busyDays.includes(day);
+                  
+                  return (
+                    <div key={`day-${day}`} 
+                      className={`relative py-2 px-1 cursor-pointer hover:bg-primary/5 transition-colors ${
+                        isToday ? 'bg-primary/10 font-bold' : ''
+                      }`}
+                      title={dayEvents.map(e => e.title).join(', ')}
+                    >
+                      <div className={`flex flex-col items-center ${isToday ? 'text-primary' : ''}`}>
+                        <span>{day}</span>
+                        {hasEvents && (
+                          <div className="mt-1 flex space-x-0.5">
+                            {isBusy ? (
+                              <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            ) : (
+                              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                            {dayEvents.length > 1 && (
+                              <div className="h-1.5 w-1.5 rounded-full bg-primary/50" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {dayEvents.length > 0 && dayEvents[0].type === 'today' && (
+                        <div className="absolute -top-1 -right-1">
+                          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Events Legend */}
-          <div className="mt-4 space-y-2">
-            {events.filter(event => event.day >= 1 && event.day <= 7).map((event, i) => (
-              <div key={i} className="flex items-center p-2 border-l-4 border-primary bg-primary/5 rounded-r-md">
-                <div className="font-medium">{event.day}</div>
-                <div className="mx-2">|</div>
-                <div>{event.title}</div>
-                <div className={cn(
-                  "ml-auto px-2 py-1 rounded-full text-xs",
-                  event.type === 'meeting' ? "bg-blue-100 text-blue-600" : 
-                  event.type === 'assignment' ? "bg-amber-100 text-amber-600" :
-                  event.type === 'exam' ? "bg-red-100 text-red-600" :
-                  "bg-green-100 text-green-600"
-                )}>
-                  {event.type}
+                  );
+                })}
+              </div>
+              
+              {/* Events list */}
+              <div className="mt-4 max-h-32 overflow-y-auto">
+                <h4 className="text-sm font-medium mb-2">Upcoming Events</h4>
+                <div className="space-y-2">
+                  {calendarEvents
+                    .filter(event => event.day >= new Date().getDate() || selectedMonth > new Date().getMonth())
+                    .sort((a, b) => a.day - b.day)
+                    .slice(0, 3)
+                    .map((event, index) => (
+                      <div key={index} className="flex items-center text-xs">
+                        <div className={`h-2 w-2 rounded-full mr-2 ${
+                          event.type === 'meeting' ? 'bg-blue-500' :
+                          event.type === 'deadline' ? 'bg-red-500' :
+                          event.type === 'exam' ? 'bg-yellow-500' :
+                          event.type === 'today' ? 'bg-green-500' :
+                          'bg-primary'
+                        }`} />
+                        <span className="font-medium mr-2">{event.day}</span>
+                        <span>{event.title}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
         

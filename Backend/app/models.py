@@ -15,6 +15,14 @@ class ApprovalStatus(enum.Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
 
+class ReportType(enum.Enum):
+    ENROLLMENT = "enrollment"
+    PERFORMANCE = "performance"
+    ACADEMIC = "academic"
+    FINANCIAL = "financial"
+    RESOURCES = "resources"
+    CUSTOM = "custom"
+
 class User(db.Model):
     __tablename__ = 'users'
     
@@ -263,6 +271,68 @@ class Assignment(db.Model):
             'description': self.description,
             'course_id': self.course_id,
             'due_date': self.due_date.isoformat() if self.due_date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+# Policy model
+class Policy(db.Model):
+    __tablename__ = 'policies'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    content = db.Column(db.Text, nullable=False)
+    department = db.Column(db.String(100), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    creator = db.relationship('User', backref='created_policies')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'content': self.content,
+            'department': self.department,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_active': self.is_active
+        }
+
+# Report model
+class Report(db.Model):
+    __tablename__ = 'reports'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    type = db.Column(db.Enum(ReportType), nullable=False)
+    content = db.Column(db.Text, nullable=False)  # JSON data for the report content
+    summary = db.Column(db.Text, nullable=True)
+    date_range = db.Column(db.String(100), nullable=True)
+    department = db.Column(db.String(100), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    creator = db.relationship('User', backref='created_reports')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'type': self.type.value,
+            'content': self.content,
+            'summary': self.summary,
+            'date_range': self.date_range,
+            'department': self.department,
+            'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         } 

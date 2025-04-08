@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -94,12 +92,22 @@ const facultyWorkloadData = [
 // COLORS for pie chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-const ChartTooltip = ({ active, payload, label }: any) => {
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  label?: string;
+}
+
+const ChartTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="p-2 bg-background border border-border rounded-md shadow-md">
         <p className="text-sm font-medium">{`${label}`}</p>
-        {payload.map((item: any, index: number) => (
+        {payload.map((item, index: number) => (
           <p key={index} className="text-xs" style={{ color: item.color }}>
             {`${item.name}: ${item.value}`}
           </p>
