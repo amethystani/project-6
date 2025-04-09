@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../lib/auth';
 import { Card, Tabs, Table, Tag, Button, Spin, Alert, List, Typography, Space, Steps, Collapse, Divider, Modal, Form, Input, Select } from 'antd';
 import { ClipboardCheck, FileText, Check, X, AlertTriangle, Calendar, User, MessageSquare, RefreshCw, Filter, ChevronDown, Plus } from 'lucide-react';
+import type { ColumnType, Key } from 'antd/es/table/interface';
 
 const { TabPane } = Tabs;
 const { Title, Text, Paragraph } = Typography;
@@ -87,44 +88,79 @@ const ApprovalsPolicy: React.FC = () => {
   };
 
   const handleUpdateApproval = async (values: any) => {
-    if (!selectedApproval) return;
+    if (!selectedApproval) {
+      console.error('No approval selected');
+      return;
+    }
+    
+    console.log('Handling approval update:', values);
+    console.log('Selected approval:', selectedApproval);
     
     setSubmitting(true);
     try {
+      // Simplify payload
+      const payload = {
+        status: values.status,
+        comments: values.comments || ''
+      };
+      
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
+      console.log(`Updating approval ${selectedApproval.id} with status: ${payload.status}`);
+      
+      // Use simplified payload and clear headers
       const response = await axios.put(
         `${apiUrl}/api/department-head/course-approvals/${selectedApproval.id}`,
-        {
-          status: values.status,
-          comments: values.comments
-        },
+        payload,
         {
           headers: { 
-            Authorization: `Bearer ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }
       );
+      
+      console.log('Update approval response:', response.data);
       
       if (response.data.status === 'success') {
         // Update the approval in the state
         setApprovals(prevApprovals => 
           prevApprovals.map(approval => 
             approval.id === selectedApproval.id 
-              ? { ...approval, status: values.status, comments: values.comments }
+              ? { ...approval, status: values.status, comments: values.comments || '' }
               : approval
           )
         );
         
+        // Show success message
+        Modal.success({
+          title: 'Course Updated',
+          content: `The course ${selectedApproval.course.course_code} has been ${values.status === 'approved' ? 'approved' : 'rejected'}.`
+        });
+        
         setApprovalModalVisible(false);
         approvalForm.resetFields();
+        fetchData();
       } else {
-        setError(response.data.message || 'Failed to update approval');
+        Modal.error({
+          title: 'Update Failed',
+          content: response.data.message || 'Failed to update approval'
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating approval:', error);
-      setError('An error occurred while updating the approval');
+      
+      let errorMessage = 'An error occurred while updating the approval';
+      
+      if (error.response) {
+        console.error('Response error:', error.response.data);
+        errorMessage = error.response.data?.message || `Server error (${error.response.status})`;
+      }
+      
+      Modal.error({
+        title: 'Update Failed',
+        content: errorMessage
+      });
     } finally {
       setSubmitting(false);
     }
@@ -301,8 +337,8 @@ const ApprovalsPolicy: React.FC = () => {
         { text: 'Approved', value: 'approved' },
         { text: 'Rejected', value: 'rejected' },
       ],
-      onFilter: (value: string | number | boolean, record: CourseApproval) => 
-        record.status === value.toString(),
+      onFilter: (value: Key | boolean, record: CourseApproval) => 
+        record.status === value,
     },
     {
       title: 'Requested At',
@@ -322,11 +358,21 @@ const ApprovalsPolicy: React.FC = () => {
             size="small" 
             disabled={record.status !== 'pending'}
             onClick={() => {
+              console.log('Review button clicked for record:', record);
               setSelectedApproval(record);
-              approvalForm.setFieldsValue({
-                status: 'approved',
-                comments: ''
-              });
+              
+              // Reset form and set initial values explicitly
+              approvalForm.resetFields();
+              
+              // Set default values for the form
+              setTimeout(() => {
+                approvalForm.setFieldsValue({
+                  status: 'approved',
+                  comments: ''
+                });
+                console.log('Form initialized with values:', approvalForm.getFieldsValue());
+              }, 100);
+              
               setApprovalModalVisible(true);
             }}
           >
@@ -692,6 +738,7 @@ const ApprovalsPolicy: React.FC = () => {
                 name="status"
                 label="Decision"
                 rules={[{ required: true, message: 'Please select a decision' }]}
+                initialValue="approved"
               >
                 <Select placeholder="Select your decision">
                   <Option value="approved">Approve</Option>
@@ -711,7 +758,14 @@ const ApprovalsPolicy: React.FC = () => {
                   <Button onClick={() => setApprovalModalVisible(false)}>
                     Cancel
                   </Button>
-                  <Button type="primary" htmlType="submit" loading={submitting}>
+                  <Button 
+                    type="primary" 
+                    htmlType="submit" 
+                    loading={submitting}
+                    onClick={() => {
+                      console.log('Submit button clicked, form values:', approvalForm.getFieldsValue());
+                    }}
+                  >
                     Submit Decision
                   </Button>
                 </Space>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Select, Table, Tag, Button, Tooltip, message, Modal, Space, Input } from 'antd';
+import { Card, Tabs, Select, Table, Tag, Button, Tooltip, message, Modal, Space, Input, Alert } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -22,13 +22,28 @@ interface Course {
 interface CourseApproval {
   id: number;
   course_id: number;
-  course: Course;
+  course?: Course;
+  
+  // Fields that may be present in flattened response format
+  course_code?: string;
+  course_name?: string;
+  description?: string;
+  department?: string;
+  credits?: number;
+  
   requested_by: number;
+  submitted_by?: number; // Alternative field name used in some API responses
   approved_by: number | null;
   status: 'pending' | 'approved' | 'rejected';
-  comments: string;
-  requested_at: string;
+  comments?: string;
+  comment?: string; // Alternative field name used in some API responses
+  requested_at?: string;
+  created_at?: string; // Alternative field name used in some API responses
   updated_at: string;
+  
+  // Additional fields that might be present in some responses
+  submitted_by_name?: string;
+  approved_by_name?: string;
 }
 
 const ResourceAllocation = () => {
@@ -43,33 +58,59 @@ const ResourceAllocation = () => {
   const { token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Cache for responses by status to improve performance
+  const [responseCache, setResponseCache] = useState<{[key: string]: CourseApproval[]}>({});
+  
+  // Last successful endpoint by status to optimize future requests
+  const [successfulEndpoints, setSuccessfulEndpoints] = useState<{[key: string]: string}>({});
 
   const fetchCourseApprovals = async () => {
     setLoading(true);
     try {
-      // Use hardcoded API URL if environment variable isn't available
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
-      const response = await axios.get(`${apiUrl}/api/course-approvals?status=${selectedStatus}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      console.log('Fetching course approvals...');
       
-      console.log('Fetched course approvals:', response.data);
+      // Try course approvals endpoint first
+      try {
+        const response = await axios.get(`${apiUrl}/api/courses/course-approvals?_t=${Date.now()}`);
+        
+        if (response.data && response.data.data) {
+          console.log('Course approvals loaded:', response.data.data);
+          setCourseApprovals(response.data.data);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching from primary endpoint:', error);
+        // Continue to fallback
+      }
       
-      if (response.data.status === 'success') {
-        setCourseApprovals(response.data.data);
-      } else {
-        message.error('Failed to fetch course approvals');
+      // Try catalog endpoint as fallback
+      try {
+        const response = await axios.get(`${apiUrl}/api/courses/catalog/course-approvals?_t=${Date.now()}`);
+        
+        if (response.data && response.data.data) {
+          console.log('Course approvals loaded from catalog endpoint:', response.data.data);
+          setCourseApprovals(response.data.data);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching from catalog endpoint:', error);
+        message.error('Failed to load course approvals. Please try again later.');
       }
     } catch (error) {
       console.error('Error fetching course approvals:', error);
-      message.error('Failed to fetch course approvals');
+      message.error('Failed to load course approvals. Please refresh the page or try again later.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    console.log(`Status filter changed to '${selectedStatus}', fetching approvals...`);
     fetchCourseApprovals();
   }, [selectedStatus, token]);
 
@@ -138,12 +179,15 @@ const ResourceAllocation = () => {
   }, []);
 
   const handleStatusChange = (value: string) => {
+    console.log(`Changing filter from '${selectedStatus}' to '${value}'`);
     setSelectedStatus(value);
   };
 
   const showCommentModal = (approval: CourseApproval, type: 'approve' | 'reject') => {
+    console.log(`Showing ${type} modal for approval:`, approval);
     setCurrentApproval(approval);
     setActionType(type);
+    setComment(''); // Reset comment field
     setCommentModalVisible(true);
   };
 
@@ -160,68 +204,98 @@ const ResourceAllocation = () => {
     }
 
     setActionLoading(true);
+    
+    // Message key for unified notifications
+    const messageKey = 'approvalAction';
+    
     try {
+      message.loading({
+        content: `Processing ${actionType} request...`,
+        key: messageKey,
+        duration: 0
+      });
+      
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      
-      // Use the correct endpoint structure with PUT method
-      const approvalEndpoint = `${apiUrl}/api/course-approvals/${currentApproval.id}`;
-      
       console.log(`Processing ${actionType} action for approval ID ${currentApproval.id}`);
-      console.log(`Sending request to: ${approvalEndpoint}`);
       
-      // Send the PUT request with status and comments
-      const payload = {
-        status: actionType === 'approve' ? 'approved' : 'rejected',
-        comments: comment
-      };
+      // First try the direct-action endpoint with GET
+      const directUrl = `${apiUrl}/api/courses/direct-action/${currentApproval.id}?action=${actionType}&t=${Date.now()}`;
+      console.log(`Using direct action URL: ${directUrl}`);
       
-      console.log('Sending payload:', payload);
-      
-      const response = await axios.put(
-        approvalEndpoint,
-        payload,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      try {
+        const response = await fetch(directUrl);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Direct action response:', data);
+          
+          message.success({
+            content: `Course ${currentApproval.course?.course_code || currentApproval.course_code || 'request'} has been ${actionType === 'approve' ? 'APPROVED' : 'REJECTED'} successfully!`,
+            duration: 5,
+            key: messageKey
+          });
+          
+          // Clear current approval and close modal
+          setCurrentApproval(null);
+          setCommentModalVisible(false);
+          setComment('');
+          
+          // Refresh the data
+          await fetchCourseApprovals();
+          return;
+        } else {
+          console.error(`Direct action failed: ${response.status} ${response.statusText}`);
+          throw new Error(`Server returned status ${response.status}`);
         }
-      );
-
-      console.log('API response:', response.data);
-
-      if (response.data.status === 'success') {
-        // Show success message with longer duration
-        message.success({
-          content: `Course request has been ${actionType === 'approve' ? 'APPROVED' : 'REJECTED'} successfully!`,
-          duration: 5,
-          style: { marginTop: '20px', fontWeight: 'bold' }
-        });
+      } catch (error) {
+        console.error('Error with direct action endpoint:', error);
         
-        // Clear current approval and close modal
-        setCurrentApproval(null);
-        setCommentModalVisible(false);
-        setComment('');
-        
-        // Refresh the data after action
-        await fetchCourseApprovals();
-        
-        // Clear URL parameters and redirect back to dashboard
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
-      } else {
-        message.error({
-          content: response.data.message || `Failed to ${actionType} course request`,
-          duration: 5,
-          style: { marginTop: '20px', fontWeight: 'bold' }
-        });
+        // Try the simplified endpoint as a fallback
+        try {
+          console.log('Trying simplified endpoint as fallback...');
+          const simpleUrl = `${apiUrl}/api/courses/simple-approve/${currentApproval.id}?action=${actionType}&t=${Date.now()}`;
+          
+          const simpleResponse = await fetch(simpleUrl);
+          
+          if (simpleResponse.ok) {
+            const data = await simpleResponse.json();
+            console.log('Simple endpoint response:', data);
+            
+            message.success({
+              content: `Course ${currentApproval.course?.course_code || currentApproval.course_code || 'request'} has been ${actionType === 'approve' ? 'APPROVED' : 'REJECTED'} successfully!`,
+              duration: 5,
+              key: messageKey
+            });
+            
+            // Clear current approval and close modal
+            setCurrentApproval(null);
+            setCommentModalVisible(false);
+            setComment('');
+            
+            // Refresh the data
+            await fetchCourseApprovals();
+            return;
+          } else {
+            const errorText = await simpleResponse.text();
+            console.error(`Simple endpoint failed: ${simpleResponse.status} ${errorText}`);
+            throw new Error(`Simplified endpoint returned status ${simpleResponse.status}`);
+          }
+        } catch (fallbackError) {
+          console.error('Error with simplified endpoint:', fallbackError);
+          message.error({
+            content: `Failed to ${actionType} course. Please try again later.`,
+            duration: 5,
+            key: messageKey
+          });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error during ${actionType} action:`, error);
+      
       message.error({
-        content: `An error occurred while trying to ${actionType} the course. Server error occurred.`,
-        duration: 5
+        content: error.message || `An error occurred during the ${actionType} action.`,
+        duration: 5,
+        key: messageKey
       });
     } finally {
       setActionLoading(false);
@@ -251,39 +325,62 @@ const ResourceAllocation = () => {
   const courseColumns = [
     {
       title: 'Course Code',
-      dataIndex: ['course', 'course_code'],
       key: 'course_code',
       width: '10%',
+      render: (_: any, record: CourseApproval) => {
+        // Handle different response formats
+        if (record.course?.course_code) {
+          return record.course.course_code;
+        } else if (record.course_code) {
+          return record.course_code;
+        } else {
+          return 'N/A';
+        }
+      }
     },
     {
       title: 'Title',
-      dataIndex: ['course', 'title'],
       key: 'title',
       width: '15%',
+      render: (_: any, record: CourseApproval) => {
+        if (record.course?.title) {
+          return record.course.title;
+        } else if (record.course_name) {
+          return record.course_name;
+        } else {
+          return 'N/A';
+        }
+      }
     },
     {
       title: 'Description',
-      dataIndex: ['course', 'description'],
       key: 'description',
       width: '12%',
       ellipsis: true,
-      render: (description: string) => (
-        <Tooltip placement="topLeft" title={description}>
-          {description || 'N/A'}
-        </Tooltip>
-      ),
+      render: (_: any, record: CourseApproval) => {
+        const description = record.course?.description || record.description || 'N/A';
+        return (
+          <Tooltip placement="topLeft" title={description}>
+            {description}
+          </Tooltip>
+        );
+      }
     },
     {
       title: 'Department',
-      dataIndex: ['course', 'department'],
       key: 'department',
       width: '15%',
+      render: (_: any, record: CourseApproval) => {
+        return record.course?.department || record.department || 'N/A';
+      }
     },
     {
       title: 'Credits',
-      dataIndex: ['course', 'credits'],
       key: 'credits',
       width: '8%',
+      render: (_: any, record: CourseApproval) => {
+        return record.course?.credits || record.credits || 'N/A';
+      }
     },
     {
       title: 'Status',
@@ -313,6 +410,7 @@ const ResourceAllocation = () => {
         if (record.status !== 'pending') {
           return null;
         }
+        
         return (
           <Space size="small">
             <Button
@@ -345,7 +443,13 @@ const ResourceAllocation = () => {
           <div className="flex items-center gap-2">
             <Button 
               icon={<ReloadOutlined />} 
-              onClick={fetchCourseApprovals}
+              onClick={() => {
+                // Force a refresh by clearing cache for current status
+                const newCache = {...responseCache};
+                delete newCache[selectedStatus];
+                setResponseCache(newCache);
+                fetchCourseApprovals();
+              }}
               loading={loading}
             >
               Refresh
@@ -354,11 +458,12 @@ const ResourceAllocation = () => {
               value={selectedStatus} 
               onChange={handleStatusChange}
               style={{ width: 120 }}
-            >
-              <Select.Option value="pending">Pending</Select.Option>
-              <Select.Option value="approved">Approved</Select.Option>
-              <Select.Option value="rejected">Rejected</Select.Option>
-            </Select>
+              options={[
+                { label: 'Pending', value: 'pending' },
+                { label: 'Approved', value: 'approved' },
+                { label: 'Rejected', value: 'rejected' }
+              ]}
+            />
           </div>
         </div>
         
@@ -378,80 +483,54 @@ const ResourceAllocation = () => {
             pagination={{ pageSize: 10 }}
             scroll={{ x: 1000 }}
             onChange={() => {}} // Added to make the table sortable
-            key={`course-table-${selectedStatus}`} // Add key to force re-render when status changes
+            key={`course-table-${selectedStatus}-${courseApprovals.length}`} // Add length to force re-render
           />
         </div>
         
         <Modal
-          title={`${actionType === 'approve' ? 'Approve' : 'Reject'} Course`}
+          title={`${actionType === 'approve' ? 'Approve' : 'Reject'} Course Request`}
           open={commentModalVisible}
           onOk={handleAction}
           onCancel={handleCancel}
           okText={actionType === 'approve' ? 'Approve' : 'Reject'}
           okButtonProps={{ 
-            type: actionType === 'approve' ? 'primary' : 'primary',
-            danger: actionType === 'reject',
             loading: actionLoading,
-            size: 'large'
+            danger: actionType === 'reject',
+            style: { 
+              backgroundColor: actionType === 'approve' ? '#1DA57A' : undefined,
+              borderColor: actionType === 'approve' ? '#1DA57A' : undefined,
+            }
           }}
-          cancelButtonProps={{
-            disabled: actionLoading,
-            size: 'large'
-          }}
-          closable={!actionLoading}
-          maskClosable={!actionLoading}
-          width={600}
+          cancelButtonProps={{ disabled: actionLoading }}
         >
-          <div className="text-lg font-medium mb-4">
-            {actionType === 'approve' 
-              ? 'Are you sure you want to approve this course?' 
-              : 'Are you sure you want to reject this course?'}
-          </div>
-          
-          {currentApproval && (
-            <div className="bg-gray-50 p-4 my-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-bold mb-2">Course Details:</h3>
-              <div className="grid grid-cols-1 gap-2">
-                <p className="text-md mb-1">
-                  <span className="font-medium">Course Code:</span> {currentApproval.course?.course_code}
-                </p>
-                <p className="text-md mb-1">
-                  <span className="font-medium">Title:</span> {currentApproval.course?.title}
-                </p>
-                <p className="text-md mb-1">
-                  <span className="font-medium">Department:</span> {currentApproval.course?.department}
-                </p>
-                <p className="text-md mb-1">
-                  <span className="font-medium">Credits:</span> {currentApproval.course?.credits}
-                </p>
-                <p className="text-md mb-1">
-                  <span className="font-medium">Requested By:</span> User ID: {currentApproval.requested_by}
-                </p>
-                <p className="text-md mb-1">
-                  <span className="font-medium">Request Date:</span> {new Date(currentApproval.requested_at).toLocaleString()}
-                </p>
-              </div>
+          <div className="mb-4">
+            <div className="font-bold mb-1">{currentApproval?.course?.course_code || currentApproval?.course_code || 'Course'}</div>
+            <div>{currentApproval?.course?.title || 'Title not available'}</div>
+            <div className="text-sm text-gray-500">
+              Department: {currentApproval?.course?.department || currentApproval?.department || 'N/A'}
             </div>
-          )}
-          
-          <div className="mt-4">
-            <label className="block mb-2 font-medium">Comments (optional):</label>
-            <Input.TextArea 
-              rows={4} 
-              value={comment} 
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Add any comments about this decision..."
-              disabled={actionLoading}
-            />
+            <div className="text-sm text-gray-500">
+              Credits: {currentApproval?.course?.credits || currentApproval?.credits || 'N/A'}
+            </div>
           </div>
 
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-blue-700 flex items-center">
-              <span className="mr-2">ℹ️</span>
-              {actionType === 'approve'
-                ? 'Approving this course will make it available in the course catalog.'
-                : 'Rejecting this course will inform the requester that their course was not approved.'}
-            </p>
+          <Alert
+            message={`Are you sure you want to ${actionType} this course?`}
+            type={actionType === 'approve' ? 'success' : 'error'}
+            showIcon
+            className="mb-4"
+          />
+
+          <div className="mb-4">
+            <label className="block text-sm mb-1">Add Comments (Optional):</label>
+            <Input.TextArea
+              rows={3}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add any comments or reasons for this decision..."
+              maxLength={500}
+              disabled={actionLoading}
+            />
           </div>
         </Modal>
       </div>

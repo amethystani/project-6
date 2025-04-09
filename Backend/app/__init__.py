@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
@@ -12,7 +12,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Configure CORS
+    # Configure CORS - Update with more permissive settings
     CORS(app, 
          resources={r"/*": {"origins": "*"}}, 
          supports_credentials=True,
@@ -22,8 +22,12 @@ def create_app():
     # Add CORS headers to all responses
     @app.after_request
     def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        # Handle OPTIONS request specifically to respond with 200 OK
+        if request.method == 'OPTIONS':
+            response.status_code = 200
         return response
     
     # Get current directory

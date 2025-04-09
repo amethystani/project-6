@@ -143,6 +143,7 @@ export default function Layout() {
         { name: 'Department Analytics', href: '/dashboard/department-analytics', icon: BarChart3 },
         { name: 'Approvals Management', href: '/dashboard/approvals-management', icon: ClipboardCheck },
         { name: 'Approvals & Policy', href: '/dashboard/approvals-policy', icon: FileText },
+        { name: 'Course Submission', href: '/dashboard/course-submission', icon: Book },
         { name: 'Reports & Strategy', href: '/dashboard/reporting-strategy', icon: FileBarChart },
       ].map((item) => {
         const isActive = location.pathname === item.href;

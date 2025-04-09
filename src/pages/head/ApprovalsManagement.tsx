@@ -52,7 +52,12 @@ const ApprovalsManagement: React.FC = () => {
       
       console.log('Fetching course approvals from:', `${apiUrl}/api/department-head/course-approvals`);
       
-      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`);
+      const response = await axios.get(`${apiUrl}/api/department-head/course-approvals`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       console.log('Received response:', response);
       
@@ -63,9 +68,18 @@ const ApprovalsManagement: React.FC = () => {
         console.error('Failed response:', response.data);
         message.error('Failed to fetch course approvals: ' + (response.data.message || 'Unknown error'));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching course approvals:', error);
-      message.error('Failed to fetch course approvals. Please try again later.');
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        message.error(`Failed to fetch course approvals: ${error.response.data?.message || error.response.statusText}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        message.error('Failed to connect to server. Please check your network connection.');
+      } else {
+        message.error('Failed to fetch course approvals: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -87,65 +101,75 @@ const ApprovalsManagement: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     setSubmitting(true);
+    
     try {
-      // Make sure credits and capacity are numbers
-      const formattedValues = {
-        ...values,
-        credits: Number(values.credits),
-        capacity: Number(values.capacity || 30)
+      console.log('Original form values:', values);
+      
+      // Prepare the data for submission
+      const submitData = {
+        course_code: values.course_code,
+        title: values.title,
+        description: values.description,
+        credits: values.credits,
+        department: values.department,
+        prerequisites: values.prerequisites || '',
+        capacity: values.capacity || 30,
+        justification: values.justification || ''
       };
-
-      console.log('Submitting form with values:', formattedValues);
-
-      // Use a hardcoded API URL if the environment variable isn't available
+      
+      console.log('Submitting course data:', submitData);
+      
+      // Using our simplified endpoint
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      const endpoint = `${apiUrl}/api/courses/`;
+      const endpoint = `${apiUrl}/api/department-head/simple-course-submit`;
+      console.log('Using simplified endpoint:', endpoint);
       
-      console.log('Submitting to endpoint:', endpoint);
-      
-      // Check required fields
-      const requiredFields = ['course_code', 'title', 'description', 'credits', 'department'];
-      const missingFields = requiredFields.filter(field => !formattedValues[field]);
-      
-      if (missingFields.length > 0) {
-        message.error(`Missing required fields: ${missingFields.join(', ')}`);
-        setSubmitting(false);
-        return;
-      }
-      
-      const response = await axios.post(endpoint, formattedValues, {
-        headers: { 
+      const response = await axios.post(endpoint, submitData, {
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
-      console.log('Response received:', response.data);
+      console.log('Server response:', response.data);
       
       if (response.data.status === 'success') {
-        message.success('Course created successfully and is pending approval');
+        Modal.success({
+          title: 'Course Submitted Successfully',
+          content: (
+            <div>
+              <p>Your course request has been submitted and is pending approval.</p>
+              <p>A unique code has been assigned: <strong>{response.data.data?.course?.course_code}</strong></p>
+            </div>
+          )
+        });
+        
         setIsModalVisible(false);
         form.resetFields();
         fetchCourseApprovals();
       } else {
-        message.error(response.data.message || 'Failed to create course');
+        message.error(`Course submission failed: ${response.data.message}`);
       }
     } catch (error: any) {
-      console.error('Error creating course:', error);
+      console.error('Error submitting course:', error);
+      
+      // Create a detailed error message
+      let errorMessage = 'Failed to submit course';
       
       if (error.response) {
-        console.error('Error response:', error.response);
-        if (error.response.data && error.response.data.message) {
-          message.error(error.response.data.message);
-        } else {
-          message.error(`Request failed with status ${error.response.status}`);
-        }
+        console.error('Response error:', error.response.data);
+        errorMessage = error.response.data?.message || `Server error (${error.response.status})`;
       } else if (error.request) {
-        console.error('No response received, request was:', error.request);
-        message.error('No response received from server. Please check if the backend is running.');
+        errorMessage = 'No response from server. Please check your connection.';
       } else {
-        message.error('Failed to create course: ' + error.message);
+        errorMessage = error.message;
       }
+      
+      // Show error to user
+      Modal.error({
+        title: 'Course Submission Failed',
+        content: errorMessage
+      });
     } finally {
       setSubmitting(false);
     }

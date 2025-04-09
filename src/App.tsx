@@ -23,6 +23,7 @@ import Profile from './pages/Profile';
 import DepartmentAnalytics from './pages/head/DepartmentAnalytics';
 import ReportingStrategy from './pages/head/ReportingStrategy';
 import ApprovalsPolicy from './pages/head/ApprovalsPolicy';
+import CourseSubmission from './pages/head/CourseSubmission';
 import CourseMaterials from './pages/faculty/CourseMaterials';
 import CourseAssignments from './pages/faculty/CourseAssignments';
 import CourseRoster from './pages/faculty/CourseRoster';
@@ -139,6 +140,7 @@ function App() {
               <Route path="approvals-management" element={<ApprovalsManagement />} />
               <Route path="approvals-policy" element={<ApprovalsPolicy />} />
               <Route path="reporting-strategy" element={<ReportingStrategy />} />
+              <Route path="course-submission" element={<CourseSubmission />} />
               {/* Admin Staff routes */}
               <Route path="user-management" element={<PlaceholderPage />} />
               <Route path="audit-logs" element={<PlaceholderPage />} />
