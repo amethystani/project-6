@@ -593,18 +593,21 @@ def get_department_head_course_requests():
                 print(f"Error processing approval {approval.id}: {str(e)}")
                 # Continue with next approval
         
-        return jsonify({
+        # Print out response data for debugging
+        print(f"Fetching all course approvals")
+        response_data = {
             'status': 'success',
             'approvals': approval_data
-        })
-    
+        }
+        print(f"Successfully fetched {len(approval_data)} approvals")
+        
+        return jsonify(response_data)
+        
     except Exception as e:
-        print(f"Error in get_department_head_course_requests: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
+        print(f"Error in course approvals: {str(e)}")
         return jsonify({
             'status': 'error',
-            'message': f'An error occurred: {str(e)}'
+            'message': str(e)
         }), 500
 
 @courses_bp.route('/course-approvals/<int:approval_id>/action', methods=['POST', 'OPTIONS'])

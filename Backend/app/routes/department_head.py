@@ -6,6 +6,8 @@ from sqlalchemy import func, text
 import json
 import traceback
 import time
+import random
+import string
 
 department_head_bp = Blueprint('department_head', __name__)
 
@@ -244,57 +246,103 @@ def get_department_policies():
 @department_head_bp.route('/policy', methods=['POST'])
 @jwt_required()
 def create_policy():
+    """Endpoint for creating department policies."""
     try:
+        print("\n=== POLICY CREATION ATTEMPT ===")
         current_user_id = get_jwt_identity()
+        print(f"User ID: {current_user_id}")
         user = User.query.get(current_user_id)
         
         if not user:
+            print(f"Error: User with ID {current_user_id} not found")
             return jsonify({
                 'status': 'error',
                 'message': 'User not found'
             }), 404
         
         # Only department heads can create policies
+        print(f"User role: {user.role}, Expected: {UserRole.DEPARTMENT_HEAD}")
         if user.role != UserRole.DEPARTMENT_HEAD:
+            print(f"Error: User role {user.role} is not department head")
             return jsonify({
                 'status': 'error',
                 'message': 'Only department heads can create policies'
             }), 403
         
-        data = request.get_json()
+        # Get the request data
+        print(f"Request content type: {request.content_type}")
+        print(f"Request method: {request.method}")
+        try:
+            data = request.get_json()
+            print(f"Parsed JSON data: {data}")
+        except Exception as json_error:
+            print(f"Error parsing JSON: {str(json_error)}")
+            # Try manual parsing as fallback
+            try:
+                raw_data = request.data.decode('utf-8')
+                print(f"Raw request data: {raw_data}")
+                import json
+                data = json.loads(raw_data)
+                print(f"Manually parsed JSON: {data}")
+            except Exception as manual_error:
+                print(f"Manual parsing also failed: {str(manual_error)}")
+                data = None
         
-        # Validate required fields
-        required_fields = ['title', 'content', 'department']
-        missing_fields = [field for field in required_fields if field not in data]
-        
-        if missing_fields:
+        if not data:
+            print("No data received or parsing failed")
             return jsonify({
                 'status': 'error',
-                'message': f'Missing required fields: {", ".join(missing_fields)}'
-            }), 400
+                'message': 'No data received or invalid format'
+            }), 422
         
-        # Create new policy
-        policy = Policy(
-            title=data['title'],
-            description=data.get('description', ''),
-            content=data['content'],
-            department=data['department'],
+        # Create policy with default values for optional fields
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        content = data.get('content', '').strip()
+        department = data.get('department', 'Computer Science').strip()
+        
+        print(f"Policy data: title='{title}', description='{description}', content length={len(content)}")
+        
+        # Basic validation
+        if not title or not content:
+            missing = []
+            if not title: missing.append('title')
+            if not content: missing.append('content')
+            print(f"Validation failed - missing fields: {missing}")
+            return jsonify({
+                'status': 'error',
+                'message': f'Missing required fields: {", ".join(missing)}'
+            }), 422
+        
+        # Create policy object
+        new_policy = Policy(
+            title=title,
+            description=description,
+            content=content,
+            department=department,
             created_by=current_user_id
         )
         
-        db.session.add(policy)
+        # Save to database
+        print("Adding policy to database")
+        db.session.add(new_policy)
         db.session.commit()
+        print(f"Policy created successfully with ID: {new_policy.id}")
         
+        # Return success response
         return jsonify({
             'status': 'success',
             'message': 'Policy created successfully',
-            'data': policy.to_dict()
+            'data': new_policy.to_dict()
         }), 201
+        
     except Exception as e:
         db.session.rollback()
+        print(f"Error creating policy: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': f'Failed to create policy: {str(e)}'
         }), 500
 
 @department_head_bp.route('/policy/<int:policy_id>', methods=['PUT'])
@@ -350,6 +398,52 @@ def update_policy(policy_id):
         return jsonify({
             'status': 'error',
             'message': str(e)
+        }), 500
+
+@department_head_bp.route('/policy/<int:policy_id>', methods=['DELETE'])
+@jwt_required()
+def delete_policy(policy_id):
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({
+                'status': 'error',
+                'message': 'User not found'
+            }), 404
+        
+        # Only department heads can delete policies
+        if user.role != UserRole.DEPARTMENT_HEAD:
+            return jsonify({
+                'status': 'error',
+                'message': 'Only department heads can delete policies'
+            }), 403
+        
+        policy = Policy.query.get(policy_id)
+        if not policy:
+            return jsonify({
+                'status': 'error',
+                'message': 'Policy not found'
+            }), 404
+        
+        # Soft delete by setting is_active to False instead of actually removing from database
+        policy.is_active = False
+        policy.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Policy successfully removed',
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting policy: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred while deleting the policy: {str(e)}'
         }), 500
 
 @department_head_bp.route('/reports', methods=['GET'])
@@ -1530,4 +1624,67 @@ def simple_course_submit():
             'status': 'error',
             'message': 'An unexpected error occurred',
             'details': str(outer_error)
+        }), 500
+
+@department_head_bp.route('/course-requests', methods=['GET'])
+@jwt_required()
+def get_department_course_requests():
+    """Endpoint for fetching course requests made by department heads."""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({
+                'status': 'error',
+                'message': 'User not found'
+            }), 404
+        
+        # Only department heads can access this endpoint
+        if user.role != UserRole.DEPARTMENT_HEAD:
+            return jsonify({
+                'status': 'error',
+                'message': 'Unauthorized access'
+            }), 403
+        
+        # Get all approvals made by this department head
+        approvals = CourseApproval.query.filter_by(requested_by=current_user_id).all()
+        
+        # Status filter can be applied if provided
+        status_filter = request.args.get('status')
+        
+        if status_filter and status_filter.lower() in ['pending', 'approved', 'rejected']:
+            filtered_approvals = [a for a in approvals if a.status.value.lower() == status_filter.lower()]
+        else:
+            filtered_approvals = approvals
+        
+        # Format the response data
+        approval_data = []
+        for approval in filtered_approvals:
+            course = Course.query.get(approval.course_id)
+            if course:
+                approval_data.append({
+                    'id': approval.id,
+                    'course': {
+                        'course_code': course.course_code,
+                        'title': course.title,
+                        'department': course.department
+                    },
+                    'status': approval.status.value,
+                    'requested_at': approval.requested_at.isoformat() if approval.requested_at else None,
+                    'updated_at': approval.updated_at.isoformat() if approval.updated_at else None
+                })
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Course requests retrieved successfully',
+            'data': approval_data
+        })
+        
+    except Exception as e:
+        print(f"Error fetching department course requests: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': f'Error retrieving course requests: {str(e)}'
         }), 500 

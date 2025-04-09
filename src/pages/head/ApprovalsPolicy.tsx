@@ -168,43 +168,63 @@ const ApprovalsPolicy: React.FC = () => {
 
   const handleCreatePolicy = async (values: any) => {
     setCreatingPolicy(true);
+    setError(null);
+    
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       
+      // Create payload with required fields
+      const payload = {
+        title: values.title || '',
+        description: values.description || '',
+        content: values.content || '',
+        department: 'Computer Science'
+      };
+      
+      // Use axios instead of fetch for better error handling
       const response = await axios.post(
         `${apiUrl}/api/department-head/policy`,
+        payload,
         {
-          title: values.title,
-          description: values.description,
-          content: values.content,
-          department: 'Computer Science' // In a real app, get this from the user's profile
-        },
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
+          headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }
       );
       
-      if (response.data.status === 'success') {
-        // Add the new policy to the state
-        setPolicies([response.data.data, ...policies]);
-        
-        setIsPolicyModalVisible(false);
-        newPolicyForm.resetFields();
-        
-        // Show success notification
-        Modal.success({
-          title: 'Policy Created',
-          content: 'The policy was successfully created and is now in effect.',
-        });
-      } else {
-        setError(response.data.message || 'Failed to create policy');
-      }
-    } catch (error) {
+      // Process successful response
+      const data = response.data;
+      
+      // Add the new policy to the state
+      setPolicies([data.data, ...policies]);
+      setIsPolicyModalVisible(false);
+      newPolicyForm.resetFields();
+      
+      Modal.success({
+        title: 'Policy Created',
+        content: 'The policy was successfully created.',
+      });
+    } catch (error: any) {
       console.error('Error creating policy:', error);
-      setError('An error occurred while creating the policy');
+      
+      // More detailed error handling
+      let errorMessage = 'Failed to create policy. Please try again.';
+      
+      if (error.response) {
+        // Server responded with an error
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request was made but no response
+        errorMessage = 'No response from server. Please check your connection.';
+      }
+      
+      Modal.error({
+        title: 'Policy Creation Failed',
+        content: errorMessage,
+      });
+      
+      setError(errorMessage);
     } finally {
       setCreatingPolicy(false);
     }
@@ -250,6 +270,52 @@ const ApprovalsPolicy: React.FC = () => {
     } catch (error) {
       console.error('Error updating policy:', error);
       setError('An error occurred while updating the policy');
+    }
+  };
+
+  const handleDeletePolicy = async (policyId: number) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      
+      // Confirm before deleting
+      Modal.confirm({
+        title: 'Delete Policy',
+        content: 'Are you sure you want to delete this policy? This action cannot be undone.',
+        okText: 'Delete',
+        okType: 'danger',
+        cancelText: 'Cancel',
+        onOk: async () => {
+          try {
+            const response = await axios.delete(
+              `${apiUrl}/api/department-head/policy/${policyId}`,
+              {
+                headers: { 
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+            
+            if (response.data.status === 'success') {
+              // Remove the policy from the state
+              setPolicies(prevPolicies => prevPolicies.filter(policy => policy.id !== policyId));
+              
+              // Show success notification
+              Modal.success({
+                title: 'Policy Deleted',
+                content: 'The policy was successfully removed.',
+              });
+            } else {
+              setError(response.data.message || 'Failed to delete policy');
+            }
+          } catch (error) {
+            console.error('Error deleting policy:', error);
+            setError('An error occurred while deleting the policy');
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error in delete confirmation:', error);
+      setError('An error occurred while processing your request');
     }
   };
 
@@ -583,7 +649,7 @@ const ApprovalsPolicy: React.FC = () => {
                                   <Form.Item
                                     label="Description"
                                     name="description"
-                                    rules={[{ required: true, message: 'Please enter a description' }]}
+                                    rules={[{ required: false }]}
                                   >
                                     <Input placeholder="Brief description of the policy" />
                                   </Form.Item>
@@ -607,7 +673,19 @@ const ApprovalsPolicy: React.FC = () => {
                         >
                           Edit
                         </Button>
-                        <Button size="small" type="primary">Share</Button>
+                        <Button 
+                          size="small" 
+                          type="primary"
+                        >
+                          Share
+                        </Button>
+                        <Button 
+                          size="small" 
+                          danger
+                          onClick={() => handleDeletePolicy(policy.id)}
+                        >
+                          Delete
+                        </Button>
                       </Space>
                     </div>
                   </div>
@@ -658,6 +736,11 @@ const ApprovalsPolicy: React.FC = () => {
           form={newPolicyForm}
           layout="vertical"
           onFinish={handleCreatePolicy}
+          initialValues={{
+            title: '',
+            description: '',
+            content: ''
+          }}
         >
           <Form.Item
             label="Policy Title"
@@ -670,7 +753,6 @@ const ApprovalsPolicy: React.FC = () => {
           <Form.Item
             label="Description"
             name="description"
-            rules={[{ required: true, message: 'Please enter a description' }]}
           >
             <Input placeholder="Brief description of the policy" />
           </Form.Item>
@@ -688,11 +770,26 @@ const ApprovalsPolicy: React.FC = () => {
               <Button onClick={() => setIsPolicyModalVisible(false)}>
                 Cancel
               </Button>
-              <Button type="primary" htmlType="submit" loading={creatingPolicy}>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                loading={creatingPolicy}
+              >
                 Create Policy
               </Button>
             </Space>
           </Form.Item>
+
+          {error && (
+            <Alert
+              message="Error"
+              description={error}
+              type="error"
+              showIcon
+              closable
+              className="mt-4"
+            />
+          )}
         </Form>
       </Modal>
 
