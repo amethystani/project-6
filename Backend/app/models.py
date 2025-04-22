@@ -335,4 +335,89 @@ class Report(db.Model):
             'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+# Faculty Course Assignment model
+class FacultyCourse(db.Model):
+    __tablename__ = 'faculty_courses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    semester = db.Column(db.String(50), nullable=False)  # e.g., "Spring 2024"
+    schedule = db.Column(db.String(100), nullable=True)  # e.g., "Mon, Wed 9:00-10:30 AM"
+    room = db.Column(db.String(50), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    faculty = db.relationship('Faculty', backref='assigned_courses')
+    course = db.relationship('Course', backref='faculty_assignments')
+    
+    # Define a unique constraint to prevent duplicate assignments
+    __table_args__ = (db.UniqueConstraint('faculty_id', 'course_id', 'semester', name='uq_faculty_course_semester'),)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'faculty_id': self.faculty_id,
+            'course_id': self.course_id,
+            'semester': self.semester,
+            'schedule': self.schedule,
+            'room': self.room,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'course': self.course.to_dict() if self.course else None
+        }
+
+# Material Type enum
+class MaterialType(enum.Enum):
+    LECTURE = "lecture"
+    NOTES = "notes"
+    ASSIGNMENT = "assignment"
+    RESOURCE = "resource"
+    READING = "reading"
+
+# Course Material model
+class CourseMaterial(db.Model):
+    __tablename__ = 'course_materials'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    file_name = db.Column(db.String(200), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)  # in bytes
+    file_type = db.Column(db.String(50), nullable=False)  # e.g., "pdf", "pptx"
+    material_type = db.Column(db.Enum(MaterialType), nullable=False)
+    is_published = db.Column(db.Boolean, default=False)
+    release_date = db.Column(db.DateTime, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    downloads = db.Column(db.Integer, default=0)
+    views = db.Column(db.Integer, default=0)
+    
+    course = db.relationship('Course', backref='materials')
+    creator = db.relationship('User', backref='created_materials')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'course_id': self.course_id,
+            'title': self.title,
+            'description': self.description,
+            'file_name': self.file_name,
+            'file_size': self.file_size,
+            'file_type': self.file_type,
+            'material_type': self.material_type.value,
+            'is_published': self.is_published,
+            'release_date': self.release_date.isoformat() if self.release_date else None,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'downloads': self.downloads,
+            'views': self.views
         } 
