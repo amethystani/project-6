@@ -1,0 +1,11 @@
+student_id,date,status,remarks
+STU001,2024-05-01,present,
+STU002,2024-05-01,absent,Medical leave
+STU003,2024-05-01,late,Arrived 15 minutes late
+STU004,2024-05-01,excused,Family emergency
+STU005,2024-05-01,present,
+STU001,2024-05-02,present,
+STU002,2024-05-02,present,
+STU003,2024-05-02,present,
+STU004,2024-05-02,late,Arrived 5 minutes late
+STU005,2024-05-02,absent,No communication

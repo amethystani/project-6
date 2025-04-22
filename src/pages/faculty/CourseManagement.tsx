@@ -288,6 +288,11 @@ const CourseManagement = () => {
               <Button type="text" icon={<Edit className="h-4 w-4" />} />
             </Link>
           </Tooltip>
+          <Tooltip title="Manage Attendance">
+            <Link to={`/dashboard/course-management/attendance/${record.id}`}>
+              <Button type="text" icon={<Users className="h-4 w-4" />} />
+            </Link>
+          </Tooltip>
           <Tooltip title="View Analytics">
             <Link to="/dashboard/faculty-analytics">
               <Button type="text" icon={<Book className="h-4 w-4" />} />

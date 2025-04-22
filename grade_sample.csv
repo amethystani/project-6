@@ -1,0 +1,9 @@
+student_id,name,email,course,course_title,assignment1,assignment2,midterm,final,participation
+20210001,John Smith,john.smith@university.edu,CS101,Introduction to Programming,85,90,78,,95
+20210022,Emily Johnson,emily.j@university.edu,CS101,Introduction to Programming,92,88,95,,100
+20210013,Michael Brown,michael.b@university.edu,CS101,Introduction to Programming,75,72,68,,85
+20210045,Sarah Davis,sarah.d@university.edu,CS305,Data Structures and Algorithms,95,98,92,,90
+20210036,David Wilson,david.w@university.edu,CS305,Data Structures and Algorithms,82,85,80,,88
+20210079,Jennifer Lee,jennifer.l@university.edu,CS305,Data Structures and Algorithms,80,76,72,,78
+20210058,Robert Taylor,robert.t@university.edu,CS401,Advanced Database Systems,88,92,90,,85
+20210064,Jessica Miller,jessica.m@university.edu,CS401,Advanced Database Systems,79,81,85,,90

@@ -31,6 +31,7 @@ import CourseMaterials from './pages/faculty/CourseMaterials';
 import CourseAssignments from './pages/faculty/CourseAssignments';
 import CourseRoster from './pages/faculty/CourseRoster';
 import CourseAnnouncements from './pages/faculty/CourseAnnouncements';
+import CourseAttendance from './pages/faculty/CourseAttendance';
 
 // Placeholder for routes that don't have components yet
 const PlaceholderPage = () => (
@@ -155,6 +156,7 @@ function App() {
               <Route path="course-management/assignments" element={<CourseAssignments />} />
               <Route path="course-management/roster" element={<CourseRoster />} />
               <Route path="course-management/announcements" element={<CourseAnnouncements />} />
+              <Route path="course-management/attendance/:courseId" element={<CourseAttendance />} />
               <Route path="grade-entry" element={<GradeEntry />} />
               <Route path="faculty-analytics" element={<FacultyAnalytics />} />
               <Route path="faculty-schedule" element={<FacultySchedule />} />

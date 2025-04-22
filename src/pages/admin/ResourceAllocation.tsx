@@ -74,7 +74,7 @@ const ResourceAllocation = () => {
       
       // Try course approvals endpoint first
       try {
-        const response = await axios.get(`${apiUrl}/api/courses/course-approvals?_t=${Date.now()}`);
+        const response = await axios.get(`${apiUrl}/api/courses/course-approvals?status=${selectedStatus}&_t=${Date.now()}`);
         
         if (response.data && response.data.data) {
           console.log('Course approvals loaded:', response.data.data);
@@ -89,7 +89,7 @@ const ResourceAllocation = () => {
       
       // Try catalog endpoint as fallback
       try {
-        const response = await axios.get(`${apiUrl}/api/courses/catalog/course-approvals?_t=${Date.now()}`);
+        const response = await axios.get(`${apiUrl}/api/courses/catalog/course-approvals?status=${selectedStatus}&_t=${Date.now()}`);
         
         if (response.data && response.data.data) {
           console.log('Course approvals loaded from catalog endpoint:', response.data.data);

@@ -379,6 +379,47 @@ class MaterialType(enum.Enum):
     RESOURCE = "resource"
     READING = "reading"
 
+class AttendanceStatus(enum.Enum):
+    PRESENT = "present"
+    ABSENT = "absent"
+    LATE = "late"
+    EXCUSED = "excused"
+
+# Attendance model
+class Attendance(db.Model):
+    __tablename__ = 'attendance'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    faculty_course_id = db.Column(db.Integer, db.ForeignKey('faculty_courses.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.Enum(AttendanceStatus), nullable=False, default=AttendanceStatus.PRESENT)
+    remarks = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    faculty_course = db.relationship('FacultyCourse', backref='attendance_records')
+    student = db.relationship('Student', backref='attendance_records')
+    faculty = db.relationship('User', foreign_keys=[created_by], backref='recorded_attendance')
+    
+    # Define a unique constraint to prevent duplicate attendance records
+    __table_args__ = (db.UniqueConstraint('faculty_course_id', 'student_id', 'date', name='uq_attendance_record'),)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'faculty_course_id': self.faculty_course_id,
+            'student_id': self.student_id,
+            'date': self.date.isoformat() if self.date else None,
+            'status': self.status.value,
+            'remarks': self.remarks,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_by': self.created_by,
+            'student': self.student.to_dict() if self.student else None
+        }
+
 # Course Material model
 class CourseMaterial(db.Model):
     __tablename__ = 'course_materials'
