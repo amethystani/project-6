@@ -10,6 +10,9 @@ import Onboarding from './components/Onboarding';
 import Landing from './pages/Landing';
 import ApprovalsManagement from './pages/head/ApprovalsManagement';
 import ResourceAllocation from './pages/admin/ResourceAllocation';
+import UserManagement from './pages/admin/UserManagement';
+import AuditLogs from './pages/admin/AuditLogs';
+import SystemSettings from './pages/admin/SystemSettings';
 import CourseManagement from './pages/faculty/CourseManagement';
 import GradeEntry from './pages/faculty/GradeEntry';
 import FacultyAnalytics from './pages/faculty/FacultyAnalytics';
@@ -142,10 +145,10 @@ function App() {
               <Route path="reporting-strategy" element={<ReportingStrategy />} />
               <Route path="course-submission" element={<CourseSubmission />} />
               {/* Admin Staff routes */}
-              <Route path="user-management" element={<PlaceholderPage />} />
-              <Route path="audit-logs" element={<PlaceholderPage />} />
+              <Route path="user-management" element={<UserManagement />} />
+              <Route path="audit-logs" element={<AuditLogs />} />
               <Route path="resource-allocation" element={<ResourceAllocation />} />
-              <Route path="system-settings" element={<PlaceholderPage />} />
+              <Route path="system-settings" element={<SystemSettings />} />
               {/* Faculty routes */}
               <Route path="course-management" element={<CourseManagement />} />
               <Route path="course-management/materials" element={<CourseMaterials />} />
