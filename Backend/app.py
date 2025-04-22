@@ -18,6 +18,53 @@ app.config.from_object(Config)
 # Initialize JWT manager
 jwt = JWTManager(app)
 
+# Add JWT error handlers to fix 422 errors
+@jwt.invalid_token_loader
+def invalid_token_callback(error_string):
+    return jsonify({
+        'status': 'error',
+        'message': f'Invalid token: {error_string}'
+    }), 401
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({
+        'status': 'error',
+        'message': 'Token has expired'
+    }), 401
+
+@jwt.unauthorized_loader
+def missing_token_callback(error_string):
+    return jsonify({
+        'status': 'error',
+        'message': f'Missing or invalid authorization header: {error_string}'
+    }), 401
+
+@jwt.token_in_blocklist_loader
+def token_in_blocklist_callback(jwt_header, jwt_payload):
+    return False  # We don't have a blocklist yet
+
+@jwt.needs_fresh_token_loader
+def needs_fresh_token_callback(jwt_header, jwt_payload):
+    return jsonify({
+        'status': 'error',
+        'message': 'Fresh token required'
+    }), 401
+
+@jwt.revoked_token_loader
+def revoked_token_callback(jwt_header, jwt_payload):
+    return jsonify({
+        'status': 'error',
+        'message': 'Token has been revoked'
+    }), 401
+
+@jwt.user_lookup_error_loader
+def user_lookup_error_callback(jwt_header, jwt_payload):
+    return jsonify({
+        'status': 'error',
+        'message': 'User not found'
+    }), 404
+
 # Enable CORS for all routes and all origins
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 

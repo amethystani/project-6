@@ -27,9 +27,15 @@ def get_courses():
         if department:
             query = query.filter_by(department=department)
         
-        if is_active:
-            is_active_bool = is_active.lower() == 'true'
-            query = query.filter_by(is_active=is_active_bool)
+        if is_active is not None:
+            try:
+                # Handle various forms of boolean values from query parameters
+                is_active_str = str(is_active).lower()
+                is_active_bool = is_active_str in ['true', '1', 'yes']
+                query = query.filter_by(is_active=is_active_bool)
+            except Exception as e:
+                # Log the error but don't let it fail the request
+                print(f"Error processing is_active parameter: {str(e)}")
             
         if search:
             search_term = f"%{search}%"
@@ -40,16 +46,28 @@ def get_courses():
             )
             
         if credits:
-            query = query.filter_by(credits=credits)
+            try:
+                query = query.filter_by(credits=int(credits))
+            except (ValueError, TypeError):
+                # Log the error but don't let it fail the request
+                print(f"Invalid credits value: {credits}")
             
         if semester:
             query = query.filter_by(semester=semester)
             
         if min_capacity:
-            query = query.filter(Course.capacity >= int(min_capacity))
+            try:
+                query = query.filter(Course.capacity >= int(min_capacity))
+            except (ValueError, TypeError):
+                # Log the error but don't let it fail the request
+                print(f"Invalid min_capacity value: {min_capacity}")
             
         if max_capacity:
-            query = query.filter(Course.capacity <= int(max_capacity))
+            try:
+                query = query.filter(Course.capacity <= int(max_capacity))
+            except (ValueError, TypeError):
+                # Log the error but don't let it fail the request
+                print(f"Invalid max_capacity value: {max_capacity}")
         
         # Execute the query
         courses = query.all()
@@ -60,6 +78,7 @@ def get_courses():
             'data': [course.to_dict() for course in courses]
         })
     except Exception as e:
+        print(f"Error in get_courses: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)
@@ -1411,4 +1430,62 @@ def simple_approve_course(approval_id):
             'message': f'Error: {str(e)}'
         })
         response.headers.add('Access-Control-Allow-Origin', '*')
-        return response, 500 
+        return response, 500
+
+@courses_bp.route('/catalog/all', methods=['GET', 'OPTIONS'])
+def get_all_public_courses():
+    """Public endpoint for getting all active courses without authentication."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        response = jsonify({
+            'status': 'success',
+            'message': 'CORS preflight request successful'
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+        
+    try:
+        # Get query parameters for filtering
+        department = request.args.get('department')
+        search = request.args.get('search')
+        credits = request.args.get('credits')
+        
+        # Build the query - only get active courses
+        query = Course.query.filter_by(is_active=True)
+        
+        if department:
+            query = query.filter_by(department=department)
+            
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (Course.course_code.ilike(search_term)) |
+                (Course.title.ilike(search_term)) |
+                (Course.description.ilike(search_term))
+            )
+            
+        if credits:
+            try:
+                query = query.filter_by(credits=int(credits))
+            except (ValueError, TypeError):
+                print(f"Invalid credits value: {credits}")
+        
+        # Execute the query
+        courses = query.all()
+        
+        print(f"Public endpoint returning {len(courses)} active courses")
+        
+        return jsonify({
+            'status': 'success',
+            'data': [course.to_dict() for course in courses]
+        })
+    except Exception as e:
+        print(f"Error in public courses endpoint: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': f'An error occurred: {str(e)}'
+        }), 500

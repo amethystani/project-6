@@ -116,9 +116,15 @@ export const useAuthStore = create<AuthState>()(
           console.error('Token verification error:', error);
           // Don't remove token on network errors to prevent logout on temporary issues
           if (error instanceof Error && error.message.includes('Server returned')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            set({ user: null });
+            if (error.message.includes('401') || error.message.includes('403')) {
+              // Only clear on auth errors
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              set({ user: null });
+            } else {
+              // For other server errors (422, 500, etc.), keep the session active
+              console.log('Non-auth error occurred, keeping session active');
+            }
           }
         } finally {
           // Only update loading state if it's different from current

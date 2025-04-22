@@ -120,16 +120,27 @@ def login():
 @jwt_required()
 def verify_token():
     """Verify a JWT token"""
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    
-    if not user:
+    try:
+        current_user_id = get_jwt_identity()
+        print(f"Token verified for user ID: {current_user_id}")
+        
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            print(f"User not found for ID: {current_user_id}")
+            return jsonify({
+                "success": False,
+                "message": "User not found"
+            }), 404
+        
+        # Return user details
+        return jsonify({
+            "success": True,
+            "user": user.to_dict()
+        }), 200
+    except Exception as e:
+        print(f"Error verifying token: {str(e)}")
         return jsonify({
             "success": False,
-            "message": "User not found"
-        }), 404
-    
-    return jsonify({
-        "success": True,
-        "user": user.to_dict()
-    }), 200 
+            "message": f"Error: {str(e)}"
+        }), 500 
