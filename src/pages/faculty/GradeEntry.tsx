@@ -37,8 +37,25 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 const { Search: SearchInput } = Input;
 
+// Add a type definition for the student object
+interface Student {
+  id: number;
+  studentId: string;
+  name: string;
+  email: string;
+  course: string;
+  courseTitle: string;
+  assignment1: number;
+  assignment2: number;
+  midterm: number;
+  final: number | null;
+  participation: number;
+  overallGrade: number | null;
+  status: string;
+}
+
 // Mock student data
-const mockStudents = [
+const mockStudents: Student[] = [
   {
     id: 1,
     studentId: '20210001',
@@ -258,15 +275,78 @@ const GradeEntry = () => {
   const uploadProps: UploadProps = {
     name: 'file',
     multiple: false,
-    action: 'https://run.mocky.io/v3/435e224c-44fb-4773-9faf-380c5e6a2188',
-    onChange(info) {
-      if (info.file.status === 'done') {
-        message.success(`${info.file.name} file uploaded successfully`);
-        setImportModalVisible(false);
-      } else if (info.file.status === 'error') {
-        message.error(`${info.file.name} file upload failed.`);
+    accept: '.csv,.xlsx',
+    beforeUpload: (file) => {
+      const isCSV = file.type === 'text/csv' || 
+                   file.name.endsWith('.csv') || 
+                   file.name.endsWith('.xlsx');
+      if (!isCSV) {
+        message.error('You can only upload CSV or Excel files!');
       }
+      return isCSV || AntUpload.LIST_IGNORE;
     },
+    customRequest: ({ file, onSuccess, onError }) => {
+      // This simulates processing the file locally
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          // Here you would actually process the CSV data
+          // For demo purposes, we'll just simulate success
+          console.log("CSV file content:", e.target?.result);
+          
+          // Simulate processing delay
+          setTimeout(() => {
+            message.success('Grades imported successfully');
+            
+            // Update student grades with random data to simulate import
+            const updatedStudents = [...students];
+            updatedStudents.forEach(student => {
+              // Only update final grades as an example
+              const finalGrade = Math.floor(70 + Math.random() * 30);
+              // Type assertion to handle null assignment
+              (student as any).final = finalGrade;
+              
+              const assignment1 = student.assignment1 || 0;
+              const assignment2 = student.assignment2 || 0;
+              const midterm = student.midterm || 0;
+              const participation = student.participation || 0;
+              
+              // Type assertion to handle null assignment
+              (student as any).overallGrade = Math.floor((assignment1 + assignment2 + midterm + finalGrade + participation) / 5);
+              student.status = getGradeStatus({...student, final: finalGrade});
+            });
+            
+            setStudents(updatedStudents);
+            setDataChanged(true);
+            onSuccess?.(file);
+            setImportModalVisible(false);
+          }, 1500);
+        } catch (error) {
+          console.error("Error processing file:", error);
+          message.error('Failed to process the file. Please check the format.');
+          onError?.(new Error('File processing failed'));
+        }
+      };
+      
+      reader.onerror = () => {
+        message.error('Failed to read the file');
+        onError?.(new Error('File reading failed'));
+      };
+      
+      if (file instanceof File) {
+        reader.readAsText(file);
+      } else {
+        message.error('Invalid file object');
+        onError?.(new Error('Invalid file object'));
+      }
+      
+      return {
+        abort() {
+          console.log('Upload aborted');
+        }
+      };
+    }
   };
   
   // Grade entry table columns
