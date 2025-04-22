@@ -6,6 +6,7 @@ from app.routes.auth import auth_bp
 from app.routes.users import users_bp
 from app.routes.courses import courses_bp
 from app.routes.department_head import department_head_bp
+from app.routes.enrollments import enrollments_bp
 from config import Config
 import logging
 import os
@@ -80,6 +81,7 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(users_bp, url_prefix='/api/users')
 app.register_blueprint(courses_bp, url_prefix='/api/courses')
 app.register_blueprint(department_head_bp, url_prefix='/api/department-head')
+app.register_blueprint(enrollments_bp, url_prefix='/api/enrollments')
 
 # Create tables if they don't exist
 with app.app_context():

@@ -3,7 +3,7 @@ from datetime import datetime
 import re
 from app.models import db, User, UserRole
 from email_validator import validate_email, EmailNotValidError
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 
 def hash_password(password):
     """Hash a password for storing."""
@@ -152,7 +152,14 @@ def login_user(email, password):
         user.last_login = datetime.utcnow()
         db.session.commit()
         
-        return {"success": True, "user": user.to_dict()}
+        # Create access token with the user's ID as the identity
+        access_token = create_access_token(identity=user.id)
+        
+        return {
+            "success": True, 
+            "user": user.to_dict(),
+            "access_token": access_token
+        }
         
     except Exception as e:
         db.session.rollback()

@@ -766,11 +766,31 @@ def enroll_in_course():
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        if not user or user.role != UserRole.STUDENT:
+        if not user:
+            return jsonify({
+                'status': 'error',
+                'message': 'User not found'
+            }), 404
+        
+        if user.role != UserRole.STUDENT:
             return jsonify({
                 'status': 'error',
                 'message': 'Only students can enroll in courses'
             }), 403
+        
+        # Check for student profile and create one if it doesn't exist
+        if not hasattr(user, 'student_profile') or user.student_profile is None:
+            print(f"Creating missing student profile for user {user.id}")
+            student = Student(
+                user_id=user.id,
+                student_id=f"STU{user.id:04d}",
+                program="Computer Science",
+                year_level=1
+            )
+            db.session.add(student)
+            db.session.commit()
+            # Refresh the user to get the new student_profile
+            db.session.refresh(user)
         
         data = request.get_json()
         
@@ -830,6 +850,7 @@ def enroll_in_course():
         }), 201
     except Exception as e:
         db.session.rollback()
+        print(f"Error in enrollment: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)

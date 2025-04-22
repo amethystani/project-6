@@ -30,6 +30,7 @@ const { Option } = Select;
 
 const AvailableCourses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -42,6 +43,38 @@ const AvailableCourses: React.FC = () => {
   const [courseDetailsVisible, setCourseDetailsVisible] = useState(false);
   const [courseDetail, setCourseDetail] = useState<Course | null>(null);
   const { token } = useAuth();
+
+  // Fetch user's enrolled courses
+  const fetchEnrolledCourses = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const freshToken = localStorage.getItem('token');
+      
+      if (!freshToken) {
+        // If not logged in, just return empty array
+        setEnrolledCourseIds([]);
+        return;
+      }
+      
+      const response = await axios.get(`${apiUrl}/api/enrollments/`, {
+        headers: { 
+          Authorization: `Bearer ${freshToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data.status === 'success') {
+        const enrollments = response.data.data || [];
+        // Extract just the course IDs
+        const courseIds = enrollments.map((enrollment: any) => enrollment.course_id);
+        setEnrolledCourseIds(courseIds);
+        console.log('User is enrolled in course IDs:', courseIds);
+      }
+    } catch (error) {
+      console.error('Error fetching enrolled courses:', error);
+      // Don't show error message to user as this is a background check
+    }
+  };
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -140,7 +173,9 @@ const AvailableCourses: React.FC = () => {
   };
 
   useEffect(() => {
+    // Fetch both available courses and enrolled courses when component mounts
     fetchCourses();
+    fetchEnrolledCourses();
   }, []);
 
   const handleEnrollClick = (course: Course) => {
@@ -153,15 +188,34 @@ const AvailableCourses: React.FC = () => {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      
+      // Get fresh token from localStorage to ensure it's current
+      const freshToken = localStorage.getItem('token');
+      
+      if (!freshToken) {
+        message.error('You must be logged in to enroll in courses');
+        setConfirmModalVisible(false);
+        return;
+      }
+      
       const response = await axios.post(
         `${apiUrl}/api/enrollments`,
         { course_id: selectedCourse.id },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { 
+            'Authorization': `Bearer ${freshToken}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
 
       if (response.data.status === 'success') {
         message.success('Successfully enrolled in the course');
         setConfirmModalVisible(false);
+        
+        // Update the enrolled courses list
+        setEnrolledCourseIds(prev => [...prev, selectedCourse.id]);
+        
         // Refresh the courses list
         fetchCourses();
       } else {
@@ -175,7 +229,10 @@ const AvailableCourses: React.FC = () => {
       if (error.response && error.response.data) {
         const { data } = error.response;
         
-        if (data.message === 'Already enrolled in this course') {
+        if (error.response.status === 401) {
+          message.error('Authentication failed. Please log out and log back in to continue.');
+        }
+        else if (data.message === 'Already enrolled in this course') {
           message.error('You are already enrolled in this course');
         } 
         // Check if the error is related to prerequisites and there are actual missing prerequisites
@@ -215,6 +272,10 @@ const AvailableCourses: React.FC = () => {
   const handleShowDetails = (course: Course) => {
     setCourseDetail(course);
     setCourseDetailsVisible(true);
+  };
+
+  const isEnrolled = (courseId: number) => {
+    return enrolledCourseIds.includes(courseId);
   };
 
   const columns = [
@@ -258,12 +319,22 @@ const AvailableCourses: React.FC = () => {
       key: 'actions',
       render: (_: any, record: Course) => (
         <div className="flex space-x-2">
-          <Button 
-            type="primary"
-            onClick={() => handleEnrollClick(record)}
-          >
-            Enroll
-          </Button>
+          {isEnrolled(record.id) ? (
+            <Button 
+              type="default"
+              disabled
+              icon={<CheckCircle size={16} className="text-green-500" />}
+            >
+              Enrolled
+            </Button>
+          ) : (
+            <Button 
+              type="primary"
+              onClick={() => handleEnrollClick(record)}
+            >
+              Enroll
+            </Button>
+          )}
           <Button 
             type="default" 
             onClick={() => handleShowDetails(record)}
@@ -423,16 +494,27 @@ const AvailableCourses: React.FC = () => {
             Close
           </Button>,
           courseDetail && (
-            <Button 
-              key="enroll" 
-              type="primary"
-              onClick={() => {
-                setCourseDetailsVisible(false);
-                handleEnrollClick(courseDetail);
-              }}
-            >
-              Enroll Now
-            </Button>
+            isEnrolled(courseDetail.id) ? (
+              <Button 
+                key="enrolled" 
+                type="default"
+                disabled
+                icon={<CheckCircle size={16} className="text-green-500" />}
+              >
+                Enrolled
+              </Button>
+            ) : (
+              <Button 
+                key="enroll" 
+                type="primary"
+                onClick={() => {
+                  setCourseDetailsVisible(false);
+                  handleEnrollClick(courseDetail);
+                }}
+              >
+                Enroll Now
+              </Button>
+            )
           )
         ]}
         width={600}

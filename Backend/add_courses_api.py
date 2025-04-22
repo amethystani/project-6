@@ -11,7 +11,7 @@ API_BASE_URL = "http://127.0.0.1:5001/api"  # Update with your actual backend UR
 ADMIN_EMAIL = "admin@snu.edu.in"  # Changed to use admin account
 ADMIN_PASSWORD = "admin123"  # Typical admin password
 JWT_SECRET = "your-super-secret-key-please-change-in-production"  # This is what the server uses
-NUM_COURSES = 50  # Number of courses to add
+NUM_COURSES = 30  # Number of courses to add
 
 # Departments to randomly assign courses to
 DEPARTMENTS = [
@@ -27,24 +27,126 @@ DEPARTMENTS = [
     "Sociology"
 ]
 
+# Detailed descriptions for each department
+DESCRIPTIONS = {
+    "Computer Science": [
+        "An introduction to computer programming and algorithm design. Students will learn fundamental programming concepts and problem-solving techniques.",
+        "Study of data structures and algorithms for efficient data organization, storage, and retrieval. Topics include linked lists, stacks, queues, trees, and graphs.",
+        "Fundamentals of computer architecture including CPU design, memory systems, and I/O interfaces. Students will understand the hardware-software interface.",
+        "An exploration of modern operating systems principles including process management, memory management, file systems, and security mechanisms.",
+        "Introduction to database design and management systems. Topics include data modeling, relational algebra, SQL, and transaction processing."
+    ],
+    "Mathematics": [
+        "Introduction to calculus with applications in science and engineering. Topics include limits, derivatives, integrals, and the fundamental theorem of calculus.",
+        "Study of linear systems, vector spaces, linear transformations, matrices, and determinants with applications to various fields.",
+        "Introduction to probability theory and statistical inference. Topics include random variables, probability distributions, and hypothesis testing.",
+        "Study of ordinary differential equations with applications in physics and engineering. Methods for solving first and second-order differential equations.",
+        "Introduction to abstract algebra covering groups, rings, and fields with applications to cryptography and coding theory."
+    ],
+    "Physics": [
+        "Introduction to classical mechanics including Newton's laws, conservation principles, and simple harmonic motion with laboratory experiments.",
+        "Study of electromagnetism covering electric and magnetic fields, Maxwell's equations, and electromagnetic waves with practical applications.",
+        "Introduction to thermal physics and statistical mechanics. Topics include heat, temperature, entropy, and the laws of thermodynamics.",
+        "Study of quantum mechanics including wave-particle duality, Schrödinger's equation, and quantum states with modern applications.",
+        "Introduction to relativity theory covering special and general relativity with implications for space, time, and gravity."
+    ],
+    "Chemistry": [
+        "Introduction to general chemistry principles including atomic structure, chemical bonding, and stoichiometry with laboratory work.",
+        "Study of organic chemistry covering structure, properties, and reactions of organic compounds with emphasis on synthesis methods.",
+        "Fundamentals of analytical chemistry including quantitative analysis, spectroscopy, and chromatography techniques with practical applications.",
+        "Introduction to physical chemistry covering thermodynamics, kinetics, and quantum chemistry with mathematical applications.",
+        "Study of biochemistry focusing on the structure and function of biomolecules including proteins, nucleic acids, and metabolic pathways."
+    ],
+    "Biology": [
+        "Introduction to cellular and molecular biology covering cell structure, function, and basic biochemical processes with laboratory work.",
+        "Study of genetics and heredity including Mendelian genetics, gene expression, and molecular genetics with modern applications.",
+        "Introduction to evolutionary biology covering natural selection, adaptation, and the history of life on Earth with case studies.",
+        "Study of human anatomy and physiology covering major organ systems, their functions, and homeostatic mechanisms.",
+        "Introduction to ecology and environmental biology examining ecosystem dynamics, population biology, and conservation principles."
+    ],
+    "Engineering": [
+        "Introduction to engineering principles and design methodology with hands-on projects and problem-solving activities.",
+        "Study of engineering mechanics including statics and dynamics with applications to structural analysis and machine design.",
+        "Fundamentals of electrical circuits and electronics covering circuit analysis, digital systems, and basic electronic components.",
+        "Introduction to materials science examining the structure, properties, and applications of engineering materials.",
+        "Study of thermodynamics and heat transfer with applications to energy systems and thermal management."
+    ],
+    "Business": [
+        "Introduction to business principles covering organizational structures, management, marketing, and financial concepts.",
+        "Study of marketing principles and strategies including market research, consumer behavior, and marketing communications.",
+        "Fundamentals of financial accounting and analysis for decision-making in business contexts.",
+        "Introduction to business ethics examining ethical dilemmas, corporate social responsibility, and ethical decision frameworks.",
+        "Study of international business covering global markets, trade policies, and cross-cultural management challenges."
+    ],
+    "Economics": [
+        "Introduction to microeconomic principles including supply and demand, market structures, and consumer choice theory.",
+        "Study of macroeconomic concepts including national income, inflation, unemployment, and fiscal and monetary policy.",
+        "Fundamentals of international economics covering trade theory, exchange rates, and global economic institutions.",
+        "Introduction to econometrics examining statistical methods for analyzing economic data and testing economic theories.",
+        "Study of development economics focusing on economic growth, poverty, inequality, and development strategies."
+    ],
+    "Psychology": [
+        "Introduction to general psychology covering major theories, research methods, and applications in various settings.",
+        "Study of developmental psychology examining human development across the lifespan from infancy to late adulthood.",
+        "Fundamentals of cognitive psychology including perception, attention, memory, language, and problem-solving processes.",
+        "Introduction to social psychology examining how people's thoughts, feelings, and behaviors are influenced by others.",
+        "Study of abnormal psychology covering psychological disorders, their causes, and treatment approaches."
+    ],
+    "Sociology": [
+        "Introduction to sociology examining social structures, institutions, and processes that shape human behavior.",
+        "Study of social inequality focusing on class, race, gender, and other dimensions of stratification in society.",
+        "Fundamentals of social research methods including survey design, data collection, and analysis techniques.",
+        "Introduction to criminology examining theories of crime, criminal behavior, and the criminal justice system.",
+        "Study of family sociology covering marriage, family structures, parenting, and family dynamics in different cultures."
+    ]
+}
+
+# Generate course prerequisites based on department
+def generate_prerequisites(department, course_code):
+    # 50% chance of having prerequisites
+    if random.random() < 0.5:
+        return ""
+    
+    num_prereqs = random.randint(1, 2)
+    prereq_codes = []
+    
+    # Generate department code prefix
+    dept_prefix = department[:3].upper()
+    
+    # Generate random course numbers (lower than current course to make sense)
+    current_num = int(course_code[3:])
+    for _ in range(num_prereqs):
+        prereq_num = random.randint(100, current_num - 1) if current_num > 101 else 100
+        prereq_codes.append(f"{dept_prefix}{prereq_num}")
+    
+    return ", ".join(prereq_codes)
+
 def random_string(length=8):
     """Generate a random string of specified length"""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 def generate_course_data():
-    """Generate random course data"""
+    """Generate random course data with better descriptions and prerequisites"""
     department = random.choice(DEPARTMENTS)
-    course_code = f"{department[:3].upper()}{random.randint(100, 499)}"
+    dept_prefix = department[:3].upper()
+    course_num = random.randint(100, 499)
+    course_code = f"{dept_prefix}{course_num}"
+    
+    # Get a random description for this department
+    description = random.choice(DESCRIPTIONS[department])
+    
+    # Generate prerequisites
+    prerequisites = generate_prerequisites(department, course_code)
     
     return {
         "course_code": course_code,
-        "title": f"{department} Course {random_string(4)}",
-        "description": f"This is an auto-generated course for {department}",
+        "title": f"{department} {course_num}",
+        "description": description,
         "credits": random.randint(1, 4),
         "department": department,
-        "prerequisites": "",
+        "prerequisites": prerequisites,
         "capacity": random.randint(20, 100),
-        "is_active": True  # Ensure this is a boolean True, not string "true"
+        "is_active": True
     }
 
 def generate_jwt_token(user):
@@ -209,7 +311,7 @@ def approve_course(token, approval_id):
     }
     approval_data = {
         "action": "approve",
-        "comments": "Auto-approved"
+        "comments": "Auto-approved to fix active status"
     }
     
     try:
@@ -251,21 +353,21 @@ def main():
         if course_result and course_result.get("status") == "success" and course_result.get("data"):
             course_id = course_result["data"]["id"]
             print(f"Course created with ID: {course_id}")
-            courses_created += 1
+            
+            # Get the approval ID
+            # Assuming the approval is created with the course and has an ID of course_id
+            approval_id = course_id
             
             # Approve the course
-            approval_result = approve_course(token, course_id)
+            approval_result = approve_course(token, approval_id)
             if approval_result and approval_result.get("status") == "success":
                 print(f"Course {course_id} approved successfully")
+                courses_created += 1
             else:
                 print(f"Failed to approve course {course_id}")
         else:
-            print(f"Failed to create course {i+1}")
-        
-        # Small delay to prevent overwhelming the server
-        time.sleep(0.2)
+            print(f"\nFailed to create course {i+1}")
     
-    # Test again after creating courses
     print("\nTesting course retrieval after adding courses:")
     test_get_courses(token)
     
