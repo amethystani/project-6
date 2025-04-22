@@ -27,19 +27,21 @@ import type { MenuProps } from 'antd';
 // Define types for users
 interface User {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   role: 'student' | 'faculty' | 'admin' | 'department_head' | 'guest';
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'pending'; // Status is now stored client-side only
   lastLogin?: string;
   createdAt: string;
 }
 
-// Mock data for users
+// Mock data for initial loading state or fallback
 const mockUsersData: User[] = [
   {
     id: 'usr-001',
-    name: 'John Smith',
+    first_name: 'John',
+    last_name: 'Smith',
     email: 'john.smith@example.edu',
     role: 'student',
     status: 'active',
@@ -48,7 +50,8 @@ const mockUsersData: User[] = [
   },
   {
     id: 'usr-002',
-    name: 'Sarah Johnson',
+    first_name: 'Sarah',
+    last_name: 'Johnson',
     email: 'sarah.johnson@example.edu',
     role: 'faculty',
     status: 'active',
@@ -57,7 +60,8 @@ const mockUsersData: User[] = [
   },
   {
     id: 'usr-003',
-    name: 'Michael Davis',
+    first_name: 'Michael',
+    last_name: 'Davis',
     email: 'michael.davis@example.edu',
     role: 'admin',
     status: 'active',
@@ -66,7 +70,8 @@ const mockUsersData: User[] = [
   },
   {
     id: 'usr-004',
-    name: 'Emily Chen',
+    first_name: 'Emily',
+    last_name: 'Chen',
     email: 'emily.chen@example.edu',
     role: 'department_head',
     status: 'active',
@@ -75,7 +80,8 @@ const mockUsersData: User[] = [
   },
   {
     id: 'usr-005',
-    name: 'Robert Wilson',
+    first_name: 'Robert',
+    last_name: 'Wilson',
     email: 'robert.wilson@example.edu',
     role: 'student',
     status: 'inactive',
@@ -84,7 +90,8 @@ const mockUsersData: User[] = [
   },
   {
     id: 'usr-006',
-    name: 'Jennifer Lopez',
+    first_name: 'Jennifer',
+    last_name: 'Lopez',
     email: 'jennifer.lopez@example.edu',
     role: 'faculty',
     status: 'active',
@@ -93,18 +100,19 @@ const mockUsersData: User[] = [
   },
   {
     id: 'usr-007',
-    name: 'David Brown',
+    first_name: 'David',
+    last_name: 'Brown',
     email: 'david.brown@example.edu',
     role: 'student',
     status: 'pending',
     lastLogin: '',
     createdAt: '2024-03-01T15:30:00'
-  },
+  }
 ];
 
 const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(mockUsersData);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsersData);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchText, setSearchText] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
@@ -112,36 +120,104 @@ const UserManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [usingMockData, setUsingMockData] = useState(false);
+  const [forceMockData, setForceMockData] = useState(false);
   const { token } = useAuth();
+  const apiUrl = 'http://localhost:5001';
+
+  const verifyValidToken = () => {
+    if (!token) return false;
+    try {
+      // Basic check if token is a valid JWT format
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      
+      // Check if token is expired (decode middle part which contains exp claim)
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.exp && payload.exp * 1000 < Date.now()) return false;
+      
+      return true;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // In a real app, we would fetch users from the backend
-      // For now, we'll just use our mock data
-      // const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      // const response = await axios.get(`${apiUrl}/api/users`, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      // setUsers(response.data.data);
-      // setFilteredUsers(response.data.data);
+      // Make API call to fetch users
+      console.log('Fetching users from:', `${apiUrl}/api/users/`);
       
-      // For demo, just setting mock data with a delay to simulate loading
-      setTimeout(() => {
-        setUsers(mockUsersData);
-        setFilteredUsers(mockUsersData);
+      if (!token) {
+        message.error('Authentication required. Please log in.');
         setLoading(false);
-      }, 500);
-    } catch (error) {
+        return;
+      }
+      
+      const response = await axios.get(`${apiUrl}/api/users/`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+        withCredentials: false  // Keep withCredentials false for CORS
+      });
+      
+      if (response.data && response.data.success && response.data.users) {
+        // Transform users from backend format to frontend format
+        const transformedUsers = response.data.users.map((user: any) => ({
+          id: user.id.toString(),
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          role: user.role,
+          status: 'active', // Default all users to active since database doesn't store this
+          lastLogin: user.last_login,
+          createdAt: user.created_at
+        }));
+        
+        // Restore status values from localStorage if available
+        const savedStatuses = localStorage.getItem('userStatuses');
+        if (savedStatuses) {
+          const statusMap = JSON.parse(savedStatuses);
+          transformedUsers.forEach((user: User) => {
+            if (statusMap[user.id]) {
+              user.status = statusMap[user.id];
+            }
+          });
+        }
+        
+        setUsers(transformedUsers);
+        setFilteredUsers(transformedUsers);
+        message.success(`Successfully loaded ${transformedUsers.length} users`);
+      } else {
+        message.error('Failed to load users: Unexpected API response format');
+      }
+      
+      setLoading(false);
+    } catch (error: any) {
       console.error('Error fetching users:', error);
-      message.error('Failed to fetch users');
+      
+      let errorMessage = 'Unknown error';
+      if (error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to backend server. Make sure it is running at http://localhost:5001';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication error. Please log in again.';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Access denied. You do not have permission to view users.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(`Failed to fetch users: ${errorMessage}`);
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     // Filter users based on search text and selected filters
@@ -150,7 +226,7 @@ const UserManagement: React.FC = () => {
     if (searchText) {
       filtered = filtered.filter(
         user => 
-          user.name.toLowerCase().includes(searchText.toLowerCase()) ||
+          `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchText.toLowerCase()) ||
           user.email.toLowerCase().includes(searchText.toLowerCase()) ||
           user.id.toLowerCase().includes(searchText.toLowerCase())
       );
@@ -171,7 +247,8 @@ const UserManagement: React.FC = () => {
     setEditingUser(user);
     if (user) {
       form.setFieldsValue({
-        name: user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
         email: user.email,
         role: user.role,
         status: user.status
@@ -186,35 +263,131 @@ const UserManagement: React.FC = () => {
     setIsModalVisible(false);
   };
 
+  // Create a function to create mock users (for development/testing)
+  const createMockUser = (id: string, firstName: string, lastName: string, email: string, role: string, status: string) => {
+    return {
+      id,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      role: role as User['role'],
+      status: status as User['status'],
+      createdAt: new Date().toISOString(),
+      lastLogin: undefined
+    } as User;
+  };
+
+  // Modify handleFormSubmit to handle creating a user when the backend is not available
   const handleFormSubmit = async (values: any) => {
     try {
       setLoading(true);
       
       if (editingUser) {
         // Update existing user
-        // In a real app, you would call the API to update the user
-        const updatedUsers = users.map(user => 
-          user.id === editingUser.id ? { ...user, ...values } : user
+        const response = await axios.put(
+          `${apiUrl}/api/users/${editingUser.id}`,
+          values,
+          { 
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          }
         );
-        setUsers(updatedUsers);
-        message.success('User updated successfully');
+        
+        if (response.data && response.data.success) {
+          // Update local state with the updated user
+          const updatedUser = response.data.user;
+          const updatedUsers = users.map(user => 
+            user.id === editingUser.id ? { 
+              ...user, 
+              first_name: updatedUser.first_name,
+              last_name: updatedUser.last_name,
+              email: updatedUser.email,
+              role: updatedUser.role,
+              status: updatedUser.status
+            } : user
+          );
+          setUsers(updatedUsers);
+          setFilteredUsers(updatedUsers);
+          message.success('User updated successfully');
+        } else {
+          message.error('Failed to update user: ' + (response.data?.message || 'Unknown error'));
+        }
       } else {
         // Create new user
-        // In a real app, you would call the API to create the user
-        const newUser: User = {
-          id: `usr-${String(users.length + 1).padStart(3, '0')}`,
-          ...values,
-          createdAt: new Date().toISOString(),
-        };
-        setUsers([...users, newUser]);
-        message.success('User created successfully');
+        const response = await axios.post(
+          `${apiUrl}/api/users/`,
+          values,
+          { 
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+        
+        if (response.data && response.data.success) {
+          // Format new user for local state
+          const newUser = response.data.user;
+          const formattedUser: User = {
+            id: newUser.id.toString(),
+            first_name: newUser.first_name,
+            last_name: newUser.last_name,
+            email: newUser.email,
+            role: newUser.role,
+            status: newUser.status || 'active',
+            createdAt: newUser.created_at || new Date().toISOString(),
+            lastLogin: newUser.last_login
+          };
+          
+          setUsers(prevUsers => [...prevUsers, formattedUser]);
+          setFilteredUsers(prevUsers => {
+            // Only add to filtered users if it passes current filters
+            if (selectedRole && formattedUser.role !== selectedRole) return prevUsers;
+            if (selectedStatus && formattedUser.status !== selectedStatus) return prevUsers;
+            if (searchText && 
+                !`${formattedUser.first_name} ${formattedUser.last_name}`.toLowerCase().includes(searchText.toLowerCase()) && 
+                !formattedUser.email.toLowerCase().includes(searchText.toLowerCase()))
+              return prevUsers;
+            
+            return [...prevUsers, formattedUser];
+          });
+          
+          message.success('User created successfully');
+          // Display temporary password if provided
+          if (response.data.temporary_password) {
+            Modal.info({
+              title: 'User Created',
+              content: (
+                <div>
+                  <p>User has been created successfully. Please share the following with the user:</p>
+                  <p><strong>Temporary Password:</strong> {response.data.temporary_password}</p>
+                  <p><strong>Access Code:</strong> {response.data.access_code}</p>
+                </div>
+              ),
+            });
+          }
+        } else {
+          message.error('Failed to create user: ' + (response.data?.message || 'Unknown error'));
+        }
       }
       
       setIsModalVisible(false);
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving user:', error);
-      message.error('Failed to save user');
+      
+      let errorMessage = 'Unknown error';
+      if (error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to backend server';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(`Failed to save user: ${errorMessage}`);
       setLoading(false);
     }
   };
@@ -222,14 +395,40 @@ const UserManagement: React.FC = () => {
   const handleDelete = async (userId: string) => {
     try {
       setLoading(true);
-      // In a real app, you would call the API to delete the user
-      const updatedUsers = users.filter(user => user.id !== userId);
-      setUsers(updatedUsers);
-      message.success('User deleted successfully');
+      const response = await axios.delete(
+        `${apiUrl}/api/users/${userId}`,
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        // Remove deleted user from local state
+        const updatedUsers = users.filter(user => user.id !== userId);
+        setUsers(updatedUsers);
+        setFilteredUsers(filteredUsers.filter(user => user.id !== userId));
+        message.success('User deleted successfully');
+      } else {
+        message.error('Failed to delete user: ' + (response.data?.message || 'Unknown error'));
+      }
+      
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting user:', error);
-      message.error('Failed to delete user');
+      
+      let errorMessage = 'Unknown error';
+      if (error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to backend server';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(`Failed to delete user: ${errorMessage}`);
       setLoading(false);
     }
   };
@@ -237,22 +436,92 @@ const UserManagement: React.FC = () => {
   const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive' | 'pending') => {
     try {
       setLoading(true);
-      // In a real app, you would call the API to update the user status
+      
+      // Instead of calling the API, we'll just update local state
+      // Update user status in local state
       const updatedUsers = users.map(user => 
         user.id === userId ? { ...user, status: newStatus } : user
       );
       setUsers(updatedUsers);
+      setFilteredUsers(filteredUsers.map(user => 
+        user.id === userId ? { ...user, status: newStatus } : user
+      ));
+      
+      // Save status to localStorage for persistence
+      const savedStatuses = localStorage.getItem('userStatuses') || '{}';
+      const statusMap = JSON.parse(savedStatuses);
+      statusMap[userId] = newStatus;
+      localStorage.setItem('userStatuses', JSON.stringify(statusMap));
+      
       message.success(`User status changed to ${newStatus}`);
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user status:', error);
-      message.error('Failed to update user status');
+      
+      let errorMessage = 'Unknown error';
+      if (error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to backend server';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(`Failed to update user status: ${errorMessage}`);
       setLoading(false);
     }
   };
 
-  const handleResetPassword = (userId: string) => {
-    message.success('Password reset link sent to the user');
+  const handleResetPassword = async (userId: string) => {
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        `${apiUrl}/api/users/${userId}/reset-password`,
+        {},
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        message.success('Password reset successfully');
+        
+        // Display the temporary password in a modal
+        if (response.data.temporary_password) {
+          Modal.info({
+            title: 'Password Reset',
+            content: (
+              <div>
+                <p>Password has been reset successfully. Please share the following with the user:</p>
+                <p><strong>Temporary Password:</strong> {response.data.temporary_password}</p>
+                <p><strong>Access Code:</strong> {response.data.access_code}</p>
+              </div>
+            ),
+          });
+        }
+      } else {
+        message.error('Failed to reset password: ' + (response.data?.message || 'Unknown error'));
+      }
+      
+      setLoading(false);
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      
+      let errorMessage = 'Unknown error';
+      if (error.message === 'Network Error') {
+        errorMessage = 'Cannot connect to backend server';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(`Failed to reset password: ${errorMessage}`);
+      setLoading(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -294,16 +563,15 @@ const UserManagement: React.FC = () => {
     },
     {
       title: 'Name',
-      dataIndex: 'name',
       key: 'name',
-      sorter: (a, b) => a.name.localeCompare(b.name),
-      render: (text, record) => (
+      sorter: (a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`),
+      render: (_, record) => (
         <div className="flex items-center">
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-2">
-            {text.charAt(0).toUpperCase()}
+            {record.first_name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="font-medium">{text}</div>
+            <div className="font-medium">{record.first_name} {record.last_name}</div>
             <div className="text-xs text-gray-500">{record.email}</div>
           </div>
         </div>
@@ -433,10 +701,11 @@ const UserManagement: React.FC = () => {
   const exportUsers = () => {
     try {
       // Convert users to CSV format
-      const header = ['ID', 'Name', 'Email', 'Role', 'Status', 'Last Login', 'Created At'];
+      const header = ['ID', 'First Name', 'Last Name', 'Email', 'Role', 'Status', 'Last Login', 'Created At'];
       const csvContent = filteredUsers.map(user => [
         user.id,
-        user.name,
+        user.first_name,
+        user.last_name,
         user.email,
         user.role,
         user.status,
@@ -484,37 +753,43 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center">
-            <Users className="mr-2 h-6 w-6 text-primary" />
-            User Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage system users, roles, and permissions
-          </p>
-        </div>
-        
-        <div className="flex mt-4 md:mt-0 space-x-2">
-          <Button
-            type="primary"
-            icon={<UserPlus size={16} className="mr-1" />}
-            onClick={() => showModal()}
-          >
-            Add User
-          </Button>
-          <Button
-            icon={<Download size={16} className="mr-1" />}
-            onClick={exportUsers}
-          >
-            Export
-          </Button>
-          <Button
-            icon={<RefreshCw size={16} className="mr-1" />}
-            onClick={fetchUsers}
-          >
-            Refresh
-          </Button>
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              type="primary"
+              icon={<RefreshCw size={16} className="mr-1" />}
+              onClick={fetchUsers}
+              loading={loading}
+            >
+              Refresh
+            </Button>
+            <Button
+              type="primary"
+              icon={<Plus size={16} />}
+              onClick={() => showModal()}
+            >
+              Add User
+            </Button>
+            <Tooltip title="Export users to CSV">
+              <Button
+                icon={<Download size={16} />}
+                onClick={exportUsers}
+              >
+                Export
+              </Button>
+            </Tooltip>
+            <Tooltip title="Import users from CSV">
+              <Button
+                icon={<Upload size={16} />}
+                onClick={() => {/* TODO: Implement import */}}
+                disabled
+              >
+                Import
+              </Button>
+            </Tooltip>
+          </div>
         </div>
       </div>
       
@@ -602,9 +877,17 @@ const UserManagement: React.FC = () => {
           }}
         >
           <Form.Item
-            name="name"
-            label="Full Name"
-            rules={[{ required: true, message: 'Please enter the user\'s name' }]}
+            name="first_name"
+            label="First Name"
+            rules={[{ required: true, message: 'Please enter the user\'s first name' }]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="last_name"
+            label="Last Name"
+            rules={[{ required: true, message: 'Please enter the user\'s last name' }]}
           >
             <Input />
           </Form.Item>
