@@ -275,6 +275,49 @@ class Assignment(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
+# Assignment Submission model
+class AssignmentSubmission(db.Model):
+    __tablename__ = 'assignment_submissions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignments.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    file_name = db.Column(db.String(200), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)  # in bytes
+    file_type = db.Column(db.String(50), nullable=False)  # e.g., "pdf", "doc"
+    submission_date = db.Column(db.DateTime, default=datetime.utcnow)
+    is_late = db.Column(db.Boolean, default=False)
+    comments = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), default="submitted")  # e.g., "submitted", "graded"
+    grade = db.Column(db.Float, nullable=True)
+    feedback = db.Column(db.Text, nullable=True)
+    graded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    graded_at = db.Column(db.DateTime, nullable=True)
+    
+    assignment = db.relationship('Assignment', backref=db.backref('submissions', lazy=True))
+    student = db.relationship('Student', backref=db.backref('assignment_submissions', lazy=True))
+    grader = db.relationship('User', foreign_keys=[graded_by], backref='graded_submissions')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'assignment_id': self.assignment_id,
+            'student_id': self.student_id,
+            'file_name': self.file_name,
+            'file_path': self.file_path,
+            'file_size': self.file_size,
+            'file_type': self.file_type,
+            'submission_date': self.submission_date.isoformat() if self.submission_date else None,
+            'is_late': self.is_late,
+            'comments': self.comments,
+            'status': self.status,
+            'grade': self.grade,
+            'feedback': self.feedback,
+            'graded_by': self.graded_by,
+            'graded_at': self.graded_at.isoformat() if self.graded_at else None
+        }
+
 # Policy model
 class Policy(db.Model):
     __tablename__ = 'policies'

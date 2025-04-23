@@ -15,9 +15,12 @@ import {
   XCircle,
   ClipboardCheck,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  File,
+  FileImage,
+  FileText as FileTextIcon
 } from 'lucide-react';
-import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs, Card, Badge, Tooltip, Divider } from 'antd';
+import { Button, Form, Input, Modal, Select, Table, Tag, InputNumber, message, Alert, Tabs, Card, Badge, Tooltip, Divider, Upload as AntUpload } from 'antd';
 import axios from 'axios';
 import { useAuth } from '../../lib/auth';
 import { Link } from 'react-router-dom';
@@ -51,6 +54,16 @@ interface CurrentCourse {
   status: 'active' | 'upcoming' | 'completed';
 }
 
+interface CourseMaterial {
+  id: number;
+  title: string;
+  type: 'document' | 'video' | 'image' | 'link' | 'assignment';
+  url: string;
+  uploaded_at: string;
+  size?: string;
+  description?: string;
+}
+
 interface CourseApproval {
   id: number;
   course_id: number;
@@ -66,7 +79,7 @@ interface CourseApproval {
 // Mock data for current courses
 const mockCurrentCourses: CurrentCourse[] = [
   {
-    id: 1,
+    id: 101,
     course_code: 'CS101',
     title: 'Introduction to Programming',
     students: 32,
@@ -76,7 +89,7 @@ const mockCurrentCourses: CurrentCourse[] = [
     status: 'active'
   },
   {
-    id: 2,
+    id: 305,
     course_code: 'CS305',
     title: 'Data Structures and Algorithms',
     students: 28,
@@ -86,7 +99,7 @@ const mockCurrentCourses: CurrentCourse[] = [
     status: 'active'
   },
   {
-    id: 3,
+    id: 401,
     course_code: 'CS401',
     title: 'Advanced Database Systems',
     students: 22,
@@ -97,12 +110,80 @@ const mockCurrentCourses: CurrentCourse[] = [
   }
 ];
 
+// Mock data for course materials
+const mockCourseMaterials: Record<number, CourseMaterial[]> = {
+  101: [
+    {
+      id: 1,
+      title: 'Introduction to Programming Syllabus',
+      type: 'document',
+      url: '/files/syllabus.pdf',
+      uploaded_at: '2024-01-15T10:30:00',
+      size: '245 KB',
+      description: 'Course syllabus with all requirements and grading criteria'
+    },
+    {
+      id: 2,
+      title: 'Week 1 Lecture Slides',
+      type: 'document',
+      url: '/files/lecture1.pdf',
+      uploaded_at: '2024-01-18T14:20:00',
+      size: '1.2 MB',
+      description: 'Introduction to programming concepts'
+    },
+    {
+      id: 3,
+      title: 'Python Installation Guide',
+      type: 'document',
+      url: '/files/python_guide.pdf',
+      uploaded_at: '2024-01-20T09:15:00',
+      size: '560 KB',
+      description: 'Step-by-step guide for installing Python'
+    }
+  ],
+  305: [
+    {
+      id: 4,
+      title: 'Data Structures Course Outline',
+      type: 'document',
+      url: '/files/ds_outline.pdf',
+      uploaded_at: '2024-01-10T11:45:00',
+      size: '320 KB',
+      description: 'Complete course outline for the semester'
+    },
+    {
+      id: 5,
+      title: 'Big-O Notation Video',
+      type: 'video',
+      url: 'https://example.com/videos/bigo',
+      uploaded_at: '2024-01-25T15:30:00',
+      description: 'Video lecture explaining Big-O notation'
+    }
+  ],
+  401: [
+    {
+      id: 6,
+      title: 'Database Systems Syllabus',
+      type: 'document',
+      url: '/files/db_syllabus.pdf',
+      uploaded_at: '2024-01-12T13:20:00',
+      size: '275 KB',
+      description: 'Course syllabus with requirements and schedule'
+    }
+  ]
+};
+
 const CourseManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [courseApprovals, setCourseApprovals] = useState<CourseApproval[]>([]);
   const [facultyCourses, setFacultyCourses] = useState<CurrentCourse[]>(mockCurrentCourses);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<CurrentCourse | null>(null);
+  const [courseMaterials, setCourseMaterials] = useState<CourseMaterial[]>([]);
+  const [isMaterialsModalVisible, setIsMaterialsModalVisible] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [materialForm] = Form.useForm();
   const { token } = useAuth();
   const [form] = Form.useForm();
 
@@ -231,6 +312,87 @@ const CourseManagement = () => {
     }
   };
 
+  // Function to open course materials modal
+  const showMaterialsModal = (course: CurrentCourse) => {
+    setSelectedCourse(course);
+    // Load course materials from mock data
+    setCourseMaterials(mockCourseMaterials[course.id] || []);
+    setIsMaterialsModalVisible(true);
+  };
+
+  // Function to handle file upload
+  const handleFileUpload = () => {
+    materialForm.validateFields().then(values => {
+      setUploadLoading(true);
+      
+      // Simulate upload delay
+      setTimeout(() => {
+        // Create new material
+        const newMaterial: CourseMaterial = {
+          id: Date.now(), // Use timestamp as temporary ID
+          title: values.title,
+          type: 'document',
+          url: '/files/uploaded_document.pdf', // Mock URL
+          uploaded_at: new Date().toISOString(),
+          size: '320 KB', // Mock size
+          description: values.description
+        };
+        
+        // Add to the list
+        const updatedMaterials = [...courseMaterials, newMaterial];
+        setCourseMaterials(updatedMaterials);
+        
+        // Update mock data
+        if (selectedCourse) {
+          mockCourseMaterials[selectedCourse.id] = updatedMaterials;
+        }
+        
+        // Reset form
+        materialForm.resetFields();
+        message.success('File uploaded successfully');
+        setUploadLoading(false);
+      }, 1500);
+    });
+  };
+  
+  // Function to delete a material
+  const handleDeleteMaterial = (materialId: number) => {
+    Modal.confirm({
+      title: 'Are you sure you want to delete this material?',
+      content: 'This action cannot be undone.',
+      okText: 'Yes, Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        const updatedMaterials = courseMaterials.filter(material => material.id !== materialId);
+        setCourseMaterials(updatedMaterials);
+        
+        // Update mock data
+        if (selectedCourse) {
+          mockCourseMaterials[selectedCourse.id] = updatedMaterials;
+        }
+        
+        message.success('Material deleted successfully');
+      }
+    });
+  };
+  
+  // Function to get icon based on material type
+  const getMaterialIcon = (type: string) => {
+    switch (type) {
+      case 'document':
+        return <File className="h-5 w-5 text-blue-500" />;
+      case 'video':
+        return <FileTextIcon className="h-5 w-5 text-red-500" />;
+      case 'image':
+        return <FileImage className="h-5 w-5 text-green-500" />;
+      case 'link':
+        return <FileText className="h-5 w-5 text-purple-500" />;
+      default:
+        return <File className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
   const currentCoursesColumns = [
     {
       title: 'Course Code',
@@ -281,7 +443,11 @@ const CourseManagement = () => {
       render: (_: unknown, record: CurrentCourse) => (
         <div className="flex space-x-2">
           <Tooltip title="Manage Course Materials">
-            <Button type="text" icon={<FileText className="h-4 w-4" />} />
+            <Button 
+              type="text" 
+              icon={<FileText className="h-4 w-4" />} 
+              onClick={() => showMaterialsModal(record)}
+            />
           </Tooltip>
           <Tooltip title="Manage Grades">
             <Link to="/dashboard/grade-entry">
@@ -437,6 +603,146 @@ const CourseManagement = () => {
           </Card>
         </div>
       </div>
+
+      {/* Course Materials Modal */}
+      <Modal
+        title={selectedCourse ? `Materials for ${selectedCourse.course_code}: ${selectedCourse.title}` : 'Course Materials'}
+        open={isMaterialsModalVisible}
+        onCancel={() => setIsMaterialsModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        <Tabs defaultActiveKey="view" className="mt-4">
+          <TabPane tab="View Materials" key="view">
+            {courseMaterials.length === 0 ? (
+              <Alert
+                message="No Materials"
+                description="There are no materials uploaded for this course yet."
+                type="info"
+                showIcon
+                className="my-4"
+              />
+            ) : (
+              <div className="mt-4">
+                <Input 
+                  prefix={<Search className="h-4 w-4 text-gray-400" />}
+                  placeholder="Search materials..."
+                  className="mb-4"
+                />
+                
+                <div className="overflow-y-auto max-h-[400px]">
+                  {courseMaterials.map(material => (
+                    <div key={material.id} className="border rounded-md p-4 mb-3 hover:border-blue-400 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-start">
+                          <div className="p-2 bg-gray-100 rounded-md mr-3">
+                            {getMaterialIcon(material.type)}
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{material.title}</h3>
+                            <p className="text-gray-500 text-sm mt-1">{material.description}</p>
+                            <div className="flex items-center text-gray-500 text-xs mt-2">
+                              <span>Uploaded: {new Date(material.uploaded_at).toLocaleDateString()}</span>
+                              {material.size && <span className="ml-3">Size: {material.size}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button 
+                            type="text" 
+                            icon={<Download className="h-4 w-4" />}
+                            title="Download"
+                          />
+                          <Button 
+                            type="text" 
+                            icon={<Trash2 className="h-4 w-4 text-red-500" />}
+                            title="Delete"
+                            onClick={() => handleDeleteMaterial(material.id)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabPane>
+          
+          <TabPane tab="Upload New Material" key="upload">
+            <Form
+              form={materialForm}
+              layout="vertical"
+              className="mt-4"
+            >
+              <Form.Item
+                name="title"
+                label="Material Title"
+                rules={[{ required: true, message: 'Please enter a title' }]}
+              >
+                <Input placeholder="e.g., Week 3 Lecture Slides" />
+              </Form.Item>
+              
+              <Form.Item
+                name="file"
+                label="File"
+                rules={[{ required: true, message: 'Please select a file to upload' }]}
+              >
+                <AntUpload.Dragger
+                  name="file"
+                  multiple={false}
+                  action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
+                  onChange={(info: any) => {
+                    if (info.file.status === 'done') {
+                      message.success(`${info.file.name} file uploaded successfully`);
+                    } else if (info.file.status === 'error') {
+                      message.error(`${info.file.name} file upload failed.`);
+                    }
+                  }}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <Upload className="h-8 w-8" />
+                  </p>
+                  <p className="ant-upload-text">Click or drag file to this area to upload</p>
+                  <p className="ant-upload-hint">
+                    Support for PDF, DOCX, PPTX, JPG, PNG files.
+                  </p>
+                </AntUpload.Dragger>
+              </Form.Item>
+              
+              <Form.Item
+                name="type"
+                label="Material Type"
+                initialValue="document"
+              >
+                <Select>
+                  <Option value="document">Document</Option>
+                  <Option value="video">Video</Option>
+                  <Option value="image">Image</Option>
+                  <Option value="link">Link</Option>
+                  <Option value="assignment">Assignment</Option>
+                </Select>
+              </Form.Item>
+              
+              <Form.Item
+                name="description"
+                label="Description"
+              >
+                <TextArea rows={3} placeholder="Brief description of this material" />
+              </Form.Item>
+              
+              <Form.Item className="mb-0 flex justify-end">
+                <Button 
+                  type="primary" 
+                  onClick={handleFileUpload}
+                  loading={uploadLoading}
+                >
+                  Upload Material
+                </Button>
+              </Form.Item>
+            </Form>
+          </TabPane>
+        </Tabs>
+      </Modal>
     </div>
   );
 };

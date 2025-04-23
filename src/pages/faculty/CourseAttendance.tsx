@@ -320,22 +320,39 @@ const CourseAttendance = () => {
   const [isManualEntryModalVisible, setIsManualEntryModalVisible] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(dayjs());
   const [exportModalVisible, setExportModalVisible] = useState<boolean>(false);
+  const [courseIdError, setCourseIdError] = useState<string | null>(null);
   const tableRef = React.useRef(null);
 
   // Initialize data
   useEffect(() => {
+    // Validate courseId
+    if (!courseId) {
+      setCourseIdError("Course ID is missing in the URL");
+      return;
+    }
+    
+    const parsedCourseId = Number(courseId);
+    if (isNaN(parsedCourseId) || parsedCourseId <= 0) {
+      setCourseIdError("Invalid Course ID: must be a positive number");
+      return;
+    }
+    
+    setCourseIdError(null);
     loadData();
   }, [courseId]);
 
   const loadData = async () => {
     if (!courseId) return;
     
+    const parsedCourseId = Number(courseId);
+    if (isNaN(parsedCourseId) || parsedCourseId <= 0) return;
+    
     setLoading(true);
     
     try {
       // In a real application, these would be API calls with proper error handling
-      const studentsData = await fetchStudentsForCourse(Number(courseId));
-      const recordsData = await fetchAttendanceRecords(Number(courseId));
+      const studentsData = await fetchStudentsForCourse(parsedCourseId);
+      const recordsData = await fetchAttendanceRecords(parsedCourseId);
       
       setStudents(studentsData);
       setAttendanceRecords(recordsData);
@@ -351,10 +368,13 @@ const CourseAttendance = () => {
   const loadAttendanceReport = async () => {
     if (!courseId) return;
     
+    const parsedCourseId = Number(courseId);
+    if (isNaN(parsedCourseId) || parsedCourseId <= 0) return;
+    
     setLoading(true);
     
     try {
-      const reportData = await fetchAttendanceReport(Number(courseId));
+      const reportData = await fetchAttendanceReport(parsedCourseId);
       setAttendanceReport(reportData);
     } catch (error) {
       message.error('Failed to load attendance report');
@@ -583,332 +603,278 @@ const CourseAttendance = () => {
 
   const summary = getAttendanceSummary();
 
-  return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <Title level={2}>Course Attendance</Title>
-        
-        <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={showManualEntryModal}
-          >
-            Take Attendance
-          </Button>
-          
-          <Upload {...uploadProps}>
-            <Button icon={<UploadOutlined />}>Import CSV</Button>
-          </Upload>
-          
-          <Button 
-            icon={<DownloadOutlined />}
-            onClick={downloadCsvTemplate}
-          >
-            Template
-          </Button>
-          
-          <Button
-            icon={<FileExcelOutlined />}
-            onClick={() => setExportModalVisible(true)}
-          >
-            Export
-          </Button>
-        </div>
-      </div>
+  // Render error message if courseId is invalid
+  const renderContent = () => {
+    if (courseIdError) {
+      return (
+        <Card>
+          <Alert
+            message="Error"
+            description={courseIdError}
+            type="error"
+            showIcon
+            action={
+              <Button size="small" type="primary" onClick={() => navigate('/dashboard/course-management')}>
+                Return to Courses
+              </Button>
+            }
+          />
+        </Card>
+      );
+    }
 
-      <Card>
-        <Tabs activeKey={activeTab} onChange={handleTabChange}>
-          <TabPane tab="Attendance Records" key="records">
-            <div className="mb-4 flex flex-col md:flex-row md:items-center gap-4">
+    return (
+      <>
+        <Card 
+          title={<Title level={4}><UserOutlined /> Course Attendance Management</Title>}
+          extra={
+            <Space>
+              <Button type="primary" onClick={showManualEntryModal} icon={<PlusOutlined />}>
+                Record Attendance
+              </Button>
+              <Tooltip title="Download CSV Template">
+                <Button onClick={downloadCsvTemplate} icon={<DownloadOutlined />} />
+              </Tooltip>
+              <Upload {...uploadProps}>
+                <Button icon={<UploadOutlined />}>Import CSV</Button>
+              </Upload>
+            </Space>
+          }
+        >
+          <div className="mb-4 flex flex-wrap gap-4 justify-between items-center">
+            <Space>
               <Input
-                placeholder="Search by student ID"
-                prefix={<SearchOutlined />}
+                placeholder="Search by Student ID"
                 value={searchText}
                 onChange={e => setSearchText(e.target.value)}
+                allowClear
+                prefix={<SearchOutlined />}
                 style={{ width: 200 }}
               />
-              
               <RangePicker
                 value={dateFilter}
-                onChange={(dates) => setDateFilter(dates as [dayjs.Dayjs, dayjs.Dayjs])}
-                format="YYYY-MM-DD"
+                onChange={(dates) => {
+                  setDateFilter(dates as [dayjs.Dayjs, dayjs.Dayjs] | null);
+                }}
+                allowClear
               />
-            </div>
-            
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-              <Card>
-                <Statistic
-                  title="Total Records"
-                  value={summary.total}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Card>
-              <Card>
-                <Statistic
-                  title="Present"
-                  value={summary.present}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-              <Card>
-                <Statistic
-                  title="Absent"
-                  value={summary.absent}
-                  valueStyle={{ color: '#f5222d' }}
-                />
-              </Card>
-              <Card>
-                <Statistic
-                  title="Late"
-                  value={summary.late}
-                  valueStyle={{ color: '#faad14' }}
-                />
-              </Card>
-              <Card>
-                <Statistic
-                  title="Excused"
-                  value={summary.excused}
-                  valueStyle={{ color: '#722ed1' }}
-                />
-              </Card>
-            </div>
-            
-            <Table
-              columns={columns}
-              dataSource={filteredRecords}
-              loading={loading}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                pageSizeOptions: ['10', '20', '50'],
-              }}
-            />
-          </TabPane>
-          
-          <TabPane tab="Attendance Reports" key="reports">
-            {loading ? (
-              <div className="text-center py-4">
-                <Spin size="large" />
-              </div>
-            ) : attendanceReport ? (
-              <div>
-                <div className="mb-4">
-                  <Alert
-                    message="Attendance Report"
-                    description={`This report covers ${attendanceReport.attendance_dates.length} class days.`}
-                    type="info"
-                    showIcon
-                  />
-                </div>
-                
-                <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <Statistic
-                      title="Total Class Days"
-                      value={attendanceReport.attendance_dates.length}
-                      valueStyle={{ color: '#1890ff' }}
-                    />
-                  </Card>
-                  <Card>
-                    <Statistic
-                      title="Students"
-                      value={attendanceReport.student_reports.length}
-                      valueStyle={{ color: '#52c41a' }}
-                    />
-                  </Card>
-                  <Card>
-                    <Statistic
-                      title="Average Attendance Rate"
-                      value={attendanceReport.student_reports.reduce((sum: number, student: AttendanceReport) => sum + student.attendance_rate, 0) / 
-                             (attendanceReport.student_reports.length || 1)}
-                      valueStyle={{ color: '#722ed1' }}
-                      suffix="%"
-                      precision={1}
-                    />
-                  </Card>
-                </div>
-                
-                <div ref={tableRef}>
-                  <Table
-                    columns={reportColumns}
-                    dataSource={attendanceReport.student_reports}
-                    rowKey={(record) => record.student.id}
-                    pagination={false}
-                  />
-                </div>
-                
-                <div className="mt-4 text-right">
-                  <DownloadTableExcel
-                    filename="attendance_report"
-                    sheet="attendance"
-                    currentTableRef={tableRef.current}
-                  >
-                    <Button icon={<FileExcelOutlined />} type="primary">
-                      Download Excel Report
-                    </Button>
-                  </DownloadTableExcel>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <FileTextOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
-                <p className="mt-2 text-gray-400">No report data available</p>
-                <Button 
-                  type="primary" 
-                  onClick={loadAttendanceReport}
-                  className="mt-4"
-                >
-                  Generate Report
-                </Button>
-              </div>
-            )}
-          </TabPane>
-        </Tabs>
-      </Card>
+            </Space>
 
-      {/* Manual Attendance Entry Modal */}
-      <Modal
-        title="Record Attendance"
-        open={isManualEntryModalVisible}
-        onCancel={() => setIsManualEntryModalVisible(false)}
-        footer={null}
-        width={800}
-      >
-        <Form
-          form={recordsForm}
-          layout="vertical"
-          onFinish={handleManualSubmit}
+            <div>
+              <Row gutter={16}>
+                <Col>
+                  <Statistic 
+                    title="Present" 
+                    value={summary.present} 
+                    valueStyle={{ color: '#52c41a' }}
+                  />
+                </Col>
+                <Col>
+                  <Statistic 
+                    title="Absent" 
+                    value={summary.absent} 
+                    valueStyle={{ color: '#f5222d' }}
+                  />
+                </Col>
+                <Col>
+                  <Statistic 
+                    title="Late" 
+                    value={summary.late} 
+                    valueStyle={{ color: '#faad14' }}
+                  />
+                </Col>
+                <Col>
+                  <Statistic 
+                    title="Excused" 
+                    value={summary.excused} 
+                    valueStyle={{ color: '#1890ff' }}
+                  />
+                </Col>
+              </Row>
+            </div>
+          </div>
+        </Card>
+
+        <Card style={{ marginTop: 16 }}>
+          <Tabs activeKey={activeTab} onChange={handleTabChange}>
+            <TabPane tab="Attendance Records" key="records">
+              <Table 
+                ref={tableRef}
+                dataSource={filteredRecords} 
+                columns={columns} 
+                rowKey="id" 
+                loading={loading}
+                pagination={{ pageSize: 20 }}
+              />
+            </TabPane>
+            <TabPane tab="Attendance Reports" key="reports">
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <Spin size="large" />
+                </div>
+              ) : attendanceReport ? (
+                <Table 
+                  dataSource={attendanceReport.student_reports} 
+                  columns={reportColumns} 
+                  rowKey={record => record.student.student_id} 
+                  pagination={{ pageSize: 20 }}
+                />
+              ) : (
+                <Alert
+                  message="No attendance data available"
+                  description="There are no attendance records for this course yet."
+                  type="info"
+                  showIcon
+                />
+              )}
+            </TabPane>
+          </Tabs>
+        </Card>
+
+        {/* Manual Attendance Entry Modal */}
+        <Modal
+          title="Record Attendance"
+          open={isManualEntryModalVisible}
+          onCancel={() => setIsManualEntryModalVisible(false)}
+          footer={null}
+          width={800}
         >
-          <Form.Item
-            name="date"
-            label="Attendance Date"
-            rules={[{ required: true, message: 'Please select a date' }]}
+          <Form
+            form={recordsForm}
+            layout="vertical"
+            onFinish={handleManualSubmit}
           >
-            <DatePicker
-              format="YYYY-MM-DD"
-              style={{ width: '100%' }}
-              disabledDate={(current) => current && current > dayjs().endOf('day')}
-              onChange={(date) => setSelectedDate(date as dayjs.Dayjs)}
-            />
-          </Form.Item>
-          
-          <div className="mb-4">
-            <Text strong>Class Roster</Text>
-            <div className="text-gray-500 text-sm">
-              Mark attendance status for each student
-            </div>
-          </div>
-          
-          <Form.List name="records">
-            {(fields) => (
-              <div className="overflow-y-auto max-h-[400px] border rounded-md p-2">
-                {fields.map((field, index) => (
-                  <div key={field.key} className="border-b last:border-b-0 py-3">
-                    <div className="flex items-center mb-2">
-                      <UserOutlined className="mr-2" />
-                      <Form.Item
-                        {...field}
-                        name={[field.name, 'name']}
-                        noStyle
-                      >
-                        <Input disabled style={{ width: 150 }} />
-                      </Form.Item>
-                      <Form.Item
-                        {...field}
-                        name={[field.name, 'student_id']}
-                        noStyle
-                      >
-                        <Input disabled className="ml-2" style={{ width: 100 }} />
-                      </Form.Item>
-                    </div>
-                    
-                    <div className="ml-6 flex flex-wrap gap-2 items-center">
-                      <Form.Item
-                        {...field}
-                        name={[field.name, 'status']}
-                        noStyle
-                      >
-                        <Radio.Group>
-                          <Radio value="present">Present</Radio>
-                          <Radio value="absent">Absent</Radio>
-                          <Radio value="late">Late</Radio>
-                          <Radio value="excused">Excused</Radio>
-                        </Radio.Group>
-                      </Form.Item>
-                      
-                      <Form.Item
-                        {...field}
-                        name={[field.name, 'remarks']}
-                        noStyle
-                      >
-                        <Input placeholder="Remarks (optional)" style={{ width: 200 }} />
-                      </Form.Item>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Form.List>
-          
-          <div className="mt-4 flex justify-end gap-2">
-            <Button onClick={() => setIsManualEntryModalVisible(false)}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit" loading={submitLoading}>
-              Submit Attendance
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Export Modal */}
-      <Modal
-        title="Export Attendance Data"
-        open={exportModalVisible}
-        onCancel={() => setExportModalVisible(false)}
-        footer={null}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item label="Date Range" name="date_range">
-            <RangePicker style={{ width: '100%' }} />
-          </Form.Item>
-          
-          <Form.Item label="Export Format" name="format" initialValue="excel">
-            <Radio.Group>
-              <Radio value="excel">Excel (.xlsx)</Radio>
-              <Radio value="csv">CSV (.csv)</Radio>
-              <Radio value="pdf">PDF (.pdf)</Radio>
-            </Radio.Group>
-          </Form.Item>
-          
-          <Form.Item label="Include Details" name="include_details" initialValue={true}>
-            <Radio.Group>
-              <Radio value={true}>Detailed Report</Radio>
-              <Radio value={false}>Summary Only</Radio>
-            </Radio.Group>
-          </Form.Item>
-          
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setExportModalVisible(false)}>
-              Cancel
-            </Button>
-            <Button 
-              type="primary" 
-              icon={<DownloadOutlined />}
-              onClick={() => {
-                message.success('Export started. File will be downloaded shortly.');
-                setExportModalVisible(false);
-              }}
+            <Form.Item
+              name="date"
+              label="Attendance Date"
+              rules={[{ required: true, message: 'Please select a date' }]}
             >
-              Export
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-    </div>
-  );
+              <DatePicker
+                format="YYYY-MM-DD"
+                style={{ width: '100%' }}
+                disabledDate={(current) => current && current > dayjs().endOf('day')}
+                onChange={(date) => setSelectedDate(date as dayjs.Dayjs)}
+              />
+            </Form.Item>
+            
+            <div className="mb-4">
+              <Text strong>Class Roster</Text>
+              <div className="text-gray-500 text-sm">
+                Mark attendance status for each student
+              </div>
+            </div>
+            
+            <Form.List name="records">
+              {(fields) => (
+                <div className="overflow-y-auto max-h-[400px] border rounded-md p-2">
+                  {fields.map((field, index) => (
+                    <div key={field.key} className="border-b last:border-b-0 py-3">
+                      <div className="flex items-center mb-2">
+                        <UserOutlined className="mr-2" />
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'name']}
+                          noStyle
+                        >
+                          <Input disabled style={{ width: 150 }} />
+                        </Form.Item>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'student_id']}
+                          noStyle
+                        >
+                          <Input disabled className="ml-2" style={{ width: 100 }} />
+                        </Form.Item>
+                      </div>
+                      
+                      <div className="ml-6 flex flex-wrap gap-2 items-center">
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'status']}
+                          noStyle
+                        >
+                          <Radio.Group>
+                            <Radio value="present">Present</Radio>
+                            <Radio value="absent">Absent</Radio>
+                            <Radio value="late">Late</Radio>
+                            <Radio value="excused">Excused</Radio>
+                          </Radio.Group>
+                        </Form.Item>
+                        
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'remarks']}
+                          noStyle
+                        >
+                          <Input placeholder="Remarks (optional)" style={{ width: 200 }} />
+                        </Form.Item>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Form.List>
+            
+            <div className="mt-4 flex justify-end gap-2">
+              <Button onClick={() => setIsManualEntryModalVisible(false)}>
+                Cancel
+              </Button>
+              <Button type="primary" htmlType="submit" loading={submitLoading}>
+                Submit Attendance
+              </Button>
+            </div>
+          </Form>
+        </Modal>
+
+        {/* Export Modal */}
+        <Modal
+          title="Export Attendance Data"
+          open={exportModalVisible}
+          onCancel={() => setExportModalVisible(false)}
+          footer={null}
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item label="Date Range" name="date_range">
+              <RangePicker style={{ width: '100%' }} />
+            </Form.Item>
+            
+            <Form.Item label="Export Format" name="format" initialValue="excel">
+              <Radio.Group>
+                <Radio value="excel">Excel (.xlsx)</Radio>
+                <Radio value="csv">CSV (.csv)</Radio>
+                <Radio value="pdf">PDF (.pdf)</Radio>
+              </Radio.Group>
+            </Form.Item>
+            
+            <Form.Item label="Include Details" name="include_details" initialValue={true}>
+              <Radio.Group>
+                <Radio value={true}>Detailed Report</Radio>
+                <Radio value={false}>Summary Only</Radio>
+              </Radio.Group>
+            </Form.Item>
+            
+            <div className="flex justify-end gap-2">
+              <Button onClick={() => setExportModalVisible(false)}>
+                Cancel
+              </Button>
+              <Button 
+                type="primary" 
+                icon={<DownloadOutlined />}
+                onClick={() => {
+                  message.success('Export started. File will be downloaded shortly.');
+                  setExportModalVisible(false);
+                }}
+              >
+                Export
+              </Button>
+            </div>
+          </Form>
+        </Modal>
+      </>
+    );
+  };
+
+  return renderContent();
 };
 
 export default CourseAttendance; 

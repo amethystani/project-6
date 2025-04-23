@@ -337,7 +337,9 @@ const coursePerformanceMetrics = [
     avgScore: '78%',
     passRate: '92%',
     trend: 'up',
-    change: '5%'
+    change: '5%',
+    pendingGrades: 0, // Initialize as 0
+    students: 46 // Add fixed student count
   },
   {
     courseCode: 'CS305',
@@ -345,7 +347,9 @@ const coursePerformanceMetrics = [
     avgScore: '72%',
     passRate: '85%',
     trend: 'down',
-    change: '3%'
+    change: '3%',
+    pendingGrades: 1, // Initialize with 1 pending
+    students: 15 // Add fixed student count 
   },
   {
     courseCode: 'CS401',
@@ -353,7 +357,9 @@ const coursePerformanceMetrics = [
     avgScore: '81%',
     passRate: '94%',
     trend: 'up',
-    change: '7%'
+    change: '7%',
+    pendingGrades: 2, // Initialize with 2 pending
+    students: 38 // Add fixed student count
   }
 ];
 
@@ -529,21 +535,29 @@ export default function Dashboard() {
   const [stats, setStats] = useState(roleSpecificStats[user?.role as keyof typeof roleSpecificStats] || roleSpecificStats.guest);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [selectedTool, setSelectedTool] = useState<(typeof courseManagementTools)[0] | null>(null);
+  const [coursesWithMaterials, setCoursesWithMaterials] = useState<Record<string, number>>({});
   
   // Fetch real data when component mounts
   useEffect(() => {
-    if (user?.role === 'head') {
+    // Generate calendar events when component mounts
+    const events = generateCalendarEvents();
+    setCalendarEvents(events);
+    
+    // Fetch analytics data if user is department head or admin
+    if (user?.role === 'head' || user?.role === 'admin') {
       fetchDepartmentAnalytics();
-      generateCalendarEvents();
     }
+    
+    // Fetch pending approvals if user is admin
     if (user?.role === 'admin') {
       fetchAdminPendingApprovals();
-      generateCalendarEvents();
     }
-    if (user?.role === 'faculty' || user?.role === 'student') {
-      generateCalendarEvents();
+    
+    // Calculate pending grades based on course materials
+    if (user?.role === 'faculty') {
+      calculatePendingGrades();
     }
-  }, [user, token]);
+  }, [user]);
   
   // Update the stats when role changes
   useEffect(() => {
@@ -733,6 +747,7 @@ export default function Dashboard() {
     
     setCalendarEvents(events);
     setBusyDays(busyDaysArray);
+    return events;
   };
 
   // Fetch department analytics data
@@ -951,6 +966,58 @@ export default function Dashboard() {
     generateCalendarEvents();
   };
 
+  // Function to calculate pending grades based on course materials
+  const calculatePendingGrades = () => {
+    // In a real app, this would fetch data from an API
+    // For now, we'll use the mock data from CourseManagement.tsx
+    
+    // Convert course codes to IDs for comparison with materials data
+    const courseCodeToId: Record<string, number> = {
+      'CS101': 101,
+      'CS305': 305,
+      'CS401': 401
+    };
+    
+    // Mock course materials data (this would normally come from an API)
+    const mockCourseMaterials: Record<number, any[]> = {
+      101: [
+        { id: 1, title: 'Introduction to Programming Syllabus', type: 'document' },
+        { id: 2, title: 'Week 1 Lecture Slides', type: 'document' },
+        { id: 3, title: 'Python Installation Guide', type: 'document' }
+      ],
+      305: [
+        { id: 4, title: 'Data Structures Course Outline', type: 'document' },
+        { id: 5, title: 'Big-O Notation Video', type: 'video' }
+      ],
+      401: [
+        { id: 6, title: 'Database Systems Syllabus', type: 'document' }
+      ]
+    };
+    
+    // Update pending grades based on materials count
+    // For demo purposes, we'll base pending grades on:
+    // - CS101: 0 pending (all materials uploaded)
+    // - CS305: 1 pending (needs more materials)
+    // - CS401: 2 pending (needs more materials)
+    
+    const updatedPendingGrades: Record<string, number> = {};
+    
+    Object.keys(courseCodeToId).forEach(courseCode => {
+      const courseId = courseCodeToId[courseCode];
+      const materials = mockCourseMaterials[courseId] || [];
+      
+      if (courseCode === 'CS101') {
+        updatedPendingGrades[courseCode] = 0; // No pending grades
+      } else if (courseCode === 'CS305') {
+        updatedPendingGrades[courseCode] = 1; // 1 pending
+      } else if (courseCode === 'CS401') {
+        updatedPendingGrades[courseCode] = 2; // 2 pending
+      }
+    });
+    
+    setCoursesWithMaterials(updatedPendingGrades);
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Welcome Section with Animated Gradient Border */}
@@ -1076,37 +1143,44 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {coursePerformanceMetrics.map((course) => (
-                  <tr key={course.courseCode} className="border-b border-border hover:bg-background/50">
-                    <td className="py-2 px-4">{course.courseCode}</td>
-                    <td className="py-2 px-4">{course.courseName}</td>
-                    <td className="py-2 px-4">
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1 text-primary" />
-                        {Math.floor(Math.random() * 40) + 15}
-                      </div>
-                    </td>
-                    <td className="py-2 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        Math.random() > 0.5 
-                          ? 'bg-yellow-100 text-yellow-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {Math.random() > 0.5 ? `${Math.floor(Math.random() * 10) + 1} pending` : 'None'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-4">
-                      <div className="flex space-x-2">
-                        <Link to={`/dashboard/course-management/${course.courseCode.toLowerCase()}`} className="text-primary hover:underline text-sm">
-                          Manage
-                        </Link>
-                        <Link to={`/dashboard/grade-entry/${course.courseCode.toLowerCase()}`} className="text-primary hover:underline text-sm">
-                          Enter Grades
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {coursePerformanceMetrics.map((course) => {
+                  // Get pending grades count from state or use default from course object
+                  const pendingGrades = coursesWithMaterials[course.courseCode] !== undefined 
+                    ? coursesWithMaterials[course.courseCode] 
+                    : course.pendingGrades;
+                  
+                  return (
+                    <tr key={course.courseCode} className="border-b border-border hover:bg-background/50">
+                      <td className="py-2 px-4">{course.courseCode}</td>
+                      <td className="py-2 px-4">{course.courseName}</td>
+                      <td className="py-2 px-4">
+                        <div className="flex items-center">
+                          <Users className="h-4 w-4 mr-1 text-primary" />
+                          {course.students || Math.floor(Math.random() * 40) + 15}
+                        </div>
+                      </td>
+                      <td className="py-2 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          pendingGrades > 0
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {pendingGrades > 0 ? `${pendingGrades} pending` : 'None'}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4">
+                        <div className="flex space-x-2">
+                          <Link to={`/dashboard/course-management/${course.courseCode.toLowerCase()}`} className="text-primary hover:underline text-sm">
+                            Manage
+                          </Link>
+                          <Link to={`/dashboard/grade-entry/${course.courseCode.toLowerCase()}`} className="text-primary hover:underline text-sm">
+                            Enter Grades
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
